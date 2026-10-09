@@ -4,6 +4,13 @@ on:
   push:
     branches: [main]
   pull_request:
+  # The smoke downloads an IDE and builds Crucible: run it on demand only.
+  workflow_dispatch:
+    inputs:
+      smoke:
+        description: Run the headless IDE smoke
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -38,6 +45,8 @@ jobs:
 
   # JetBrains Plugin Verifier, one IDE per job: each unpacks to several GB.
   verify:
+    # Each job downloads an IDE: verify on main and on demand, not on every PR.
+    if: github.event_name != 'pull_request'
     strategy:
       fail-fast: false
       matrix:
@@ -63,8 +72,9 @@ jobs:
   # IntelliJ IDEA: highlighting, the bundled server, the editor's errors,
   # hover, semantic tokens and completion.
   smoke:
+    if: github.event_name == 'workflow_dispatch' && inputs.smoke
     runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
-    timeout-minutes: 45
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with: { persist-credentials: false }
@@ -96,6 +106,7 @@ jobs:
         with: { distribution: temurin, java-version: '21' }
       - uses: gradle/actions/setup-gradle@v4
       - run: ./gradlew smoke -PcrucibleLsp="$GITHUB_WORKSPACE/crucible/target/release/crucible-lsp"
+        timeout-minutes: 15
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

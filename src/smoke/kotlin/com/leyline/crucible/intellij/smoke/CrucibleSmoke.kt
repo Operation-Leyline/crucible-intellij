@@ -41,6 +41,18 @@ class CrucibleSmoke : ApplicationStarter {
     override val requiredModality: Int = ApplicationStarter.NOT_IN_EDT
 
     override fun main(args: List<String>) {
+        // A call into the IDE can block forever, where no loop deadline helps.
+        // The watchdog turns a hang into a failure with every thread's stack.
+        val limit = System.getProperty("crucible.smoke.timeoutSeconds")?.toLongOrNull() ?: 300L
+        Thread({
+            Thread.sleep(limit * 1000)
+            System.err.println("CRUCIBLE_SMOKE_TIMEOUT after ${limit}s; thread dump follows")
+            for ((thread, stack) in Thread.getAllStackTraces()) {
+                System.err.println("\"${thread.name}\" ${thread.state}")
+                stack.forEach { System.err.println("    at $it") }
+            }
+            Runtime.getRuntime().halt(2)
+        }, "crucible-smoke-watchdog").apply { isDaemon = true }.start()
         try {
             run(Path.of(args[1]))
             exitProcess(0)
