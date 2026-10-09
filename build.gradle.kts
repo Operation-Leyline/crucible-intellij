@@ -102,8 +102,11 @@ intellijPlatform {
             if (platformLocalPath.isPresent) {
                 local(file(platformLocalPath.get()))
             } else {
-                create(IntelliJPlatformType.IntellijIdeaUltimate, providers.gradleProperty("platformVersion"))
-                create(IntelliJPlatformType.RustRover, providers.gradleProperty("platformVersion"))
+                // -PverifyIde=IU or RR checks one IDE, so CI can spread them over jobs.
+                val only = providers.gradleProperty("verifyIde").orNull
+                val version = providers.gradleProperty("platformVersion")
+                if (only == null || only == "IU") create(IntelliJPlatformType.IntellijIdeaUltimate, version)
+                if (only == null || only == "RR") create(IntelliJPlatformType.RustRover, version)
             }
         }
     }

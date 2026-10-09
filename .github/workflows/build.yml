@@ -34,21 +34,27 @@ jobs:
           name: plugin-without-server
           path: build/distributions/*.zip
 
-  # JetBrains Plugin Verifier against IntelliJ IDEA and RustRover.
+  # JetBrains Plugin Verifier, one IDE per job: each unpacks to several GB.
   verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        ide: [IU, RR]
     runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
         with: { persist-credentials: false }
+      - name: Free disk space for the IDE downloads
+        run: ./.github/free-disk-space.sh
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: '21' }
       - uses: gradle/actions/setup-gradle@v4
-      - run: ./gradlew verifyPlugin
+      - run: ./gradlew verifyPlugin -PverifyIde=${{ matrix.ide }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: plugin-verifier
+          name: plugin-verifier-${{ matrix.ide }}
           path: build/reports/pluginVerifier
 
   # The plugin and a crucible-lsp built from Crucible, together in a headless
@@ -60,6 +66,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { persist-credentials: false }
+      - name: Free disk space for the IDE downloads
+        run: ./.github/free-disk-space.sh
       - name: Authenticate the private Crucible checkout
         id: app-token
         uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
