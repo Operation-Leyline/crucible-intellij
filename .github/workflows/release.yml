@@ -25,6 +25,8 @@ jobs:
           fi
           echo "VERSION=$version" >> "$GITHUB_ENV"
           echo "CRUCIBLE_VERSION=$(sed -n 's/^crucibleVersion *= *//p' gradle.properties)" >> "$GITHUB_ENV"
+      - name: Free disk space for the IDE downloads
+        run: ./.github/free-disk-space.sh
       - name: Authenticate the private Crucible release
         id: app-token
         uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
