@@ -1,0 +1,44 @@
+<idea-plugin>
+    <id>com.leyline.crucible</id>
+    <name>Crucible</name>
+    <vendor url="https://github.com/Operation-Leyline">Leyline</vendor>
+    <resource-bundle>messages.CrucibleBundle</resource-bundle>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.lsp</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <fileType name="Crucible" language="Crucible" extensions="cru" fieldName="INSTANCE"
+                  implementationClass="com.leyline.crucible.intellij.CrucibleFileType"/>
+        <lang.parserDefinition language="Crucible"
+                               implementationClass="com.leyline.crucible.intellij.psi.CrucibleParserDefinition"/>
+        <lang.syntaxHighlighterFactory language="Crucible"
+                                       implementationClass="com.leyline.crucible.intellij.highlighting.CrucibleSyntaxHighlighterFactory"/>
+        <colorSettingsPage implementation="com.leyline.crucible.intellij.highlighting.CrucibleColorSettingsPage"/>
+        <lang.commenter language="Crucible" implementationClass="com.leyline.crucible.intellij.editor.CrucibleCommenter"/>
+        <lang.braceMatcher language="Crucible" implementationClass="com.leyline.crucible.intellij.editor.CrucibleBraceMatcher"/>
+        <lang.quoteHandler language="Crucible" implementationClass="com.leyline.crucible.intellij.editor.CrucibleQuoteHandler"/>
+        <lineIndentProvider implementation="com.leyline.crucible.intellij.editor.CrucibleLineIndentProvider"/>
+        <typedHandler implementation="com.leyline.crucible.intellij.editor.CrucibleTypedHandler"/>
+        <indexPatternBuilder implementation="com.leyline.crucible.intellij.editor.CrucibleIndexPatternBuilder"/>
+        <langCodeStyleSettingsProvider implementation="com.leyline.crucible.intellij.editor.CrucibleCodeStyleSettingsProvider"/>
+
+        <platform.lsp.integrationProvider implementation="com.leyline.crucible.intellij.lsp.CrucibleLspIntegrationProvider"/>
+
+        <applicationConfigurable parentId="language" id="crucible.settings"
+                                 instance="com.leyline.crucible.intellij.settings.CrucibleConfigurable"
+                                 key="settings.display.name"/>
+        <notificationGroup id="Crucible" displayType="BALLOON" key="notification.group"/>
+
+        <internalFileTemplate name="Crucible File"/>
+        <internalFileTemplate name="Crucible Service"/>
+        <internalFileTemplate name="Crucible Manifest"/>
+    </extensions>
+
+    <actions>
+        <action id="Crucible.NewFile" class="com.leyline.crucible.intellij.actions.CreateCrucibleFileAction"
+                icon="/icons/crucible.svg">
+            <add-to-group group-id="NewGroup" anchor="before" relative-to-action="NewFromTemplate"/>
+        </action>
+    </actions>
+</idea-plugin>

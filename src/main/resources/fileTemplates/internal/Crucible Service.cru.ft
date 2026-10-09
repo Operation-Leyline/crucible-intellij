@@ -1,0 +1,6 @@
+service ${NAME} {
+    version "1"
+    protocol json
+    resources []
+    errors [ValidationException, InternalServerException]
+}

@@ -1,0 +1,19 @@
+service Shop {
+    version "1"
+    protocol json
+    operations [GetItem]
+    errors [ValidationException, InternalServerException]
+}
+
+/// Reads one item. `ItemIdd` is a deliberate typo the smoke expects as an error.
+readonly operation GetItem {
+    http GET "/items/{id}"
+
+    input {
+        id: ItemIdd
+    }
+
+    output {
+        other: ItemId
+    }
+}

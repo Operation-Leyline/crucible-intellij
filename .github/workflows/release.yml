@@ -1,0 +1,66 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 60
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - name: Check the tag matches pluginVersion
+        run: |
+          version=$(sed -n 's/^pluginVersion *= *//p' gradle.properties)
+          if [[ "$GITHUB_REF_NAME" != "v$version" ]]; then
+            echo "Tag $GITHUB_REF_NAME does not match pluginVersion $version." >&2
+            exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          echo "CRUCIBLE_VERSION=$(sed -n 's/^crucibleVersion *= *//p' gradle.properties)" >> "$GITHUB_ENV"
+      - name: Authenticate the private Crucible release
+        id: app-token
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
+        with:
+          app-id: ${{ vars.CRUCIBLE_APP_ID }}
+          private-key: ${{ secrets.CRUCIBLE_APP_PRIVATE_KEY }}
+          owner: Operation-Leyline
+          repositories: crucible
+          permission-contents: read
+      - name: Download crucible-lsp for every platform
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          gh release download "v$CRUCIBLE_VERSION" --repo Operation-Leyline/crucible \
+            --pattern 'crucible-lsp-*.zip' --dir server-dist
+          ls server-dist
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '21' }
+      - uses: gradle/actions/setup-gradle@v4
+      - run: ./gradlew check verifyPlugin buildPlugin -PcrucibleLspDir=server-dist
+      - name: Write updatePlugins.xml for a custom plugin repository
+        run: |
+          url="https://github.com/$GITHUB_REPOSITORY/releases/download/v$VERSION/crucible-intellij-$VERSION.zip"
+          since=$(sed -n 's/^pluginSinceBuild *= *//p' gradle.properties)
+          cat > build/distributions/updatePlugins.xml <<EOF
+          <plugins>
+            <plugin id="com.leyline.crucible" url="$url" version="$VERSION">
+              <idea-version since-build="$since"/>
+            </plugin>
+          </plugins>
+          EOF
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ./gradlew getChangelog --no-header --console=plain -q > notes.md
+          gh release create "v$VERSION" --repo "$GITHUB_REPOSITORY" --verify-tag \
+            --title "Crucible for JetBrains IDEs $VERSION" --notes-file notes.md \
+            "build/distributions/crucible-intellij-$VERSION.zip" build/distributions/updatePlugins.xml

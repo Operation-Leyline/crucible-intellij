@@ -1,0 +1,93 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Unit and platform tests, and the plugin ZIP (without a bundled server).
+  build:
+    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '21' }
+      - uses: gradle/actions/setup-gradle@v4
+      - run: ./gradlew check buildPlugin
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-reports
+          path: build/reports/tests
+      - uses: actions/upload-artifact@v4
+        with:
+          name: plugin-without-server
+          path: build/distributions/*.zip
+
+  # JetBrains Plugin Verifier against IntelliJ IDEA and RustRover.
+  verify:
+    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '21' }
+      - uses: gradle/actions/setup-gradle@v4
+      - run: ./gradlew verifyPlugin
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: plugin-verifier
+          path: build/reports/pluginVerifier
+
+  # The plugin and a crucible-lsp built from Crucible, together in a headless
+  # IntelliJ IDEA: highlighting, the bundled server, the editor's errors,
+  # hover, semantic tokens and completion.
+  smoke:
+    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - name: Authenticate the private Crucible checkout
+        id: app-token
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
+        with:
+          app-id: ${{ vars.CRUCIBLE_APP_ID }}
+          private-key: ${{ secrets.CRUCIBLE_APP_PRIVATE_KEY }}
+          owner: Operation-Leyline
+          repositories: crucible
+          permission-contents: read
+      - uses: actions/checkout@v4
+        with:
+          repository: Operation-Leyline/crucible
+          # Until a Crucible release ships crucible-lsp, smoke against main.
+          ref: ${{ vars.CRUCIBLE_REF || 'main' }}
+          token: ${{ steps.app-token.outputs.token }}
+          path: crucible
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo build --locked --release -p crucible-lsp
+        working-directory: crucible
+        env:
+          CARGO_BUILD_JOBS: '2'
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '21' }
+      - uses: gradle/actions/setup-gradle@v4
+      - run: ./gradlew smoke -PcrucibleLsp="$GITHUB_WORKSPACE/crucible/target/release/crucible-lsp"
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: smoke-ide-logs
+          path: .intellijPlatform/sandbox/**/log_smokeIde

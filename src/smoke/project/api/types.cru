@@ -1,0 +1,2 @@
+/// An item's identifier.
+string ItemId { length 1..10 }

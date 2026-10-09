@@ -1,0 +1,4 @@
+[model]
+namespace = "example.service"
+sources = ["."]
+imports = ["crucible.errors"]

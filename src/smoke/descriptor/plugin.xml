@@ -1,0 +1,12 @@
+<idea-plugin>
+    <id>com.leyline.crucible.smoke</id>
+    <name>Crucible Smoke</name>
+    <version>0.1.0</version>
+    <vendor>Leyline</vendor>
+    <idea-version since-build="262"/>
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.leyline.crucible</depends>
+    <extensions defaultExtensionNs="com.intellij">
+        <appStarter id="crucibleSmoke" implementation="com.leyline.crucible.intellij.smoke.CrucibleSmoke"/>
+    </extensions>
+</idea-plugin>
