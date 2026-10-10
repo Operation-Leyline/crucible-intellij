@@ -2,6 +2,8 @@ package com.leyline.crucible.intellij.highlighting
 
 import com.intellij.openapi.editor.colors.TextAttributesKey
 import com.intellij.platform.lsp.api.customization.LspSemanticTokensSupport
+import com.intellij.psi.PsiFile
+import com.leyline.crucible.intellij.psi.CrucibleFile
 
 /**
  * Paints the server's semantic tokens (`TOKEN_TYPES` and `TOKEN_MODIFIERS` in
@@ -13,6 +15,13 @@ import com.intellij.platform.lsp.api.customization.LspSemanticTokensSupport
  * modifier on the declaration and on every reference to it.
  */
 class CrucibleSemanticTokens : LspSemanticTokensSupport() {
+    /**
+     * The platform asks for semantic tokens only in plain-text and TextMate
+     * files, assuming any other language highlights itself. Crucible's lexer
+     * cannot tell a service from an error; the server can.
+     */
+    override fun shouldAskServerForSemanticTokens(psiFile: PsiFile): Boolean = psiFile is CrucibleFile
+
     override fun getTextAttributesKey(tokenType: String, modifiers: List<String>): TextAttributesKey? =
         colorOf(tokenType, modifiers)
 

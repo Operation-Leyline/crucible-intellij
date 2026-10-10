@@ -6,7 +6,10 @@ import com.intellij.codeInsight.template.impl.TemplateSettings
 import com.intellij.testFramework.LightVirtualFile
 import com.jetbrains.jsonSchema.ide.JsonSchemaService
 import com.leyline.crucible.intellij.json.CrucibleManifestSchema
+import com.leyline.crucible.intellij.highlighting.CrucibleSemanticTokens
+import com.leyline.crucible.intellij.lsp.CrucibleDocumentHighlights
 import com.leyline.crucible.intellij.lsp.CrucibleFormatting
+import com.leyline.crucible.intellij.lsp.CrucibleRename
 import com.leyline.crucible.intellij.lsp.CrucibleGotoDeclarationHandler
 
 /** Typing assistance, templates, the manifest schema and the LSP customizations. */
@@ -80,6 +83,18 @@ class CrucibleAssistTest : CrucibleTestCase() {
         myFixture.completeBasic()
         val naming = myFixture.lookupElementStrings.orEmpty()
         assertTrue("completions: $naming", naming.containsAll(listOf("severity", "operations", "members")))
+    }
+
+    fun `test the server colors, highlights and renames in cru files but not elsewhere`() {
+        // The platform's defaults ask the server only in plain-text and
+        // TextMate files; without these, a .cru file gets lexer colors only.
+        val cru = myFixture.configureByText("a.cru", "structure A {}\n")
+        assertTrue(CrucibleSemanticTokens().shouldAskServerForSemanticTokens(cru))
+        assertTrue(CrucibleDocumentHighlights().shouldAskServerForDocumentHighlights(cru))
+        assertTrue(CrucibleRename().shouldRunRename(cru))
+        val other = myFixture.configureByText("notes.txt", "structure A {}\n")
+        assertFalse(CrucibleSemanticTokens().shouldAskServerForSemanticTokens(other))
+        assertFalse(CrucibleRename().shouldRunRename(other))
     }
 
     fun `test reformat of a cru file always goes to the server`() {

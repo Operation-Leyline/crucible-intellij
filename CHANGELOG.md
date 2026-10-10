@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+- Semantic highlighting, highlighting of other uses and rename now actually
+  go through `crucible-lsp` in `.cru` files. The platform asks a language
+  server for these only in plain-text and TextMate files unless a plugin opts
+  in, so `.cru` files had lexer colors only and the colors by kind never
+  showed.
 - `.cru` file type with lexical highlighting, a color settings page, line
   comments, brace and quote pairing, smart indentation and TODO support.
 - `crucible-lsp` bundled and started through the platform LSP client: the
