@@ -22,14 +22,20 @@ import com.intellij.platform.lsp.api.ProjectWideLspClientDescriptor
 import com.intellij.platform.lsp.api.customization.LspCodeLensCustomizer
 import com.intellij.platform.lsp.api.customization.LspCodeLensSupport
 import com.intellij.platform.lsp.api.customization.LspCustomization
+import com.intellij.platform.lsp.api.customization.LspDocumentHighlightsCustomizer
+import com.intellij.platform.lsp.api.customization.LspDocumentHighlightsSupport
 import com.intellij.platform.lsp.api.customization.LspFormattingCustomizer
 import com.intellij.platform.lsp.api.customization.LspFormattingSupport
+import com.intellij.platform.lsp.api.customization.LspRenameCustomizer
+import com.intellij.platform.lsp.api.customization.LspRenameSupport
 import com.intellij.platform.lsp.api.customization.LspSemanticTokensCustomizer
 import com.intellij.platform.lsp.api.lsWidget.LspClientWidgetItem
+import com.intellij.psi.PsiFile
 import com.intellij.util.execution.ParametersListUtil
 import com.leyline.crucible.intellij.CrucibleBundle
 import com.leyline.crucible.intellij.CrucibleIcons
 import com.leyline.crucible.intellij.highlighting.CrucibleSemanticTokens
+import com.leyline.crucible.intellij.psi.CrucibleFile
 import com.leyline.crucible.intellij.settings.CrucibleConfigurable
 import com.leyline.crucible.intellij.settings.CrucibleSettings
 import java.awt.event.MouseEvent
@@ -101,6 +107,8 @@ class CrucibleLspClientDescriptor(project: Project) : ProjectWideLspClientDescri
         override val semanticTokensCustomizer: LspSemanticTokensCustomizer = CrucibleSemanticTokens()
         override val formattingCustomizer: LspFormattingCustomizer = CrucibleFormatting()
         override val codeLensCustomizer: LspCodeLensCustomizer = CrucibleCodeLens()
+        override val documentHighlightsCustomizer: LspDocumentHighlightsCustomizer = CrucibleDocumentHighlights()
+        override val renameCustomizer: LspRenameCustomizer = CrucibleRename()
     }
 
     companion object {
@@ -127,6 +135,24 @@ class CrucibleFormatting : LspFormattingSupport() {
         ideCanFormatThisFileItself: Boolean,
         serverExplicitlyWantsToFormatThisFile: Boolean,
     ): Boolean = file.extension == "cru"
+}
+
+/**
+ * Highlighting other uses of the name under the caret. Like semantic tokens,
+ * the platform asks the server only in plain-text and TextMate files unless
+ * told otherwise; the flat Crucible PSI knows no uses of its own.
+ */
+class CrucibleDocumentHighlights : LspDocumentHighlightsSupport() {
+    override fun shouldAskServerForDocumentHighlights(psiFile: PsiFile): Boolean = psiFile is CrucibleFile
+}
+
+/**
+ * Rename (Shift+F6) through the server, which renames a declaration across
+ * the package. By default the platform leaves rename in other languages to
+ * the IDE, which would only rename the text under the caret here.
+ */
+class CrucibleRename : LspRenameSupport() {
+    override fun shouldRunRename(psiFile: PsiFile): Boolean = psiFile is CrucibleFile
 }
 
 /**

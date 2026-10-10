@@ -25,6 +25,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiManager
 import com.leyline.crucible.intellij.CrucibleFileType
 import com.leyline.crucible.intellij.CrucibleLanguage
+import com.leyline.crucible.intellij.highlighting.CrucibleColors
 import com.leyline.crucible.intellij.highlighting.CrucibleSyntaxHighlighter
 import com.leyline.crucible.intellij.lsp.CrucibleGotoDeclarationHandler
 import com.leyline.crucible.intellij.lsp.CrucibleLspIntegrationProvider
@@ -127,6 +128,19 @@ class CrucibleSmoke : ApplicationStarter {
         check(capabilities.codeLensProvider != null) { "no code lens provider" }
         report("the server advertises kind modifiers $modifiers and code lenses")
 
+        // The editor paints them: the platform asks for semantic tokens only
+        // when the plugin opts in, so check the colors the passes produce.
+        val wanted = mapOf("Shop" to CrucibleColors.SERVICE, "ValidationException" to CrucibleColors.ERROR)
+        var painted = emptyMap<String, String>()
+        val colorDeadline = System.nanoTime() + 60_000_000_000L
+        while (System.nanoTime() < colorDeadline) {
+            painted = colors(project, file, text, wanted.keys)
+            if (wanted.all { (word, key) -> painted[word] == key.externalName }) break
+            Thread.sleep(500)
+        }
+        check(wanted.all { (word, key) -> painted[word] == key.externalName }) { "semantic colors in the editor: $painted" }
+        report("the editor paints declaration kinds $painted")
+
         // Ctrl+hover and Ctrl+click: the declaration handler asks the server.
         val referenceOffset = text.indexOf("other: ItemId") + "other: ".length
         val targets = read<Array<PsiElement>?> {
@@ -139,6 +153,17 @@ class CrucibleSmoke : ApplicationStarter {
             "go to declaration went to ${target.text} in $targetFile"
         }
         report("go to declaration (and the Ctrl+hover underline) resolve through the server")
+
+        // The package's policy, in its crucible.toml, shows as a warning.
+        var warnings = emptyList<String>()
+        val policyDeadline = System.nanoTime() + 60_000_000_000L
+        while (System.nanoTime() < policyDeadline) {
+            warnings = problems(project, file, HighlightSeverity.WARNING)
+            if (warnings.any { "is not camelCase" in it }) break
+            Thread.sleep(500)
+        }
+        check(warnings.any { "operation name `GetItem` is not camelCase" in it }) { "editor warnings: $warnings" }
+        report("the package policy shows in the editor $warnings")
 
         checkReformat(project, root)
         println("CRUCIBLE_SMOKE_OK: the editor integration works end to end")
@@ -188,14 +213,33 @@ class CrucibleSmoke : ApplicationStarter {
     }
 
     /** The errors the daemon's main passes produce, as an open editor shows them. */
-    private fun errors(project: Project, file: VirtualFile): List<String> {
+    private fun errors(project: Project, file: VirtualFile): List<String> = problems(project, file, HighlightSeverity.ERROR)
+
+    /** The problems of exactly `severity` the daemon's main passes produce. */
+    private fun problems(project: Project, file: VirtualFile, severity: HighlightSeverity): List<String> {
         var result = emptyList<String>()
         ApplicationManager.getApplication().invokeAndWait {
             result = MainPassesRunner(project, "Crucible smoke", null)
-                .runMainPasses(listOf(file), HighlightSeverity.ERROR)
+                .runMainPasses(listOf(file), severity)
                 .values.flatten()
-                .filter { it.severity == HighlightSeverity.ERROR }
+                .filter { it.severity == severity }
                 .mapNotNull { it.description }
+        }
+        return result
+    }
+
+    /** The color the daemon's passes give the first occurrence of each word. */
+    private fun colors(project: Project, file: VirtualFile, text: String, words: Set<String>): Map<String, String> {
+        var result = emptyMap<String, String>()
+        ApplicationManager.getApplication().invokeAndWait {
+            val infos = MainPassesRunner(project, "Crucible smoke", null)
+                .runMainPasses(listOf(file), HighlightSeverity.INFORMATION)
+                .values.flatten()
+            result = words.mapNotNull { word ->
+                val start = text.indexOf(word)
+                infos.firstOrNull { it.startOffset == start && it.endOffset == start + word.length && it.forcedTextAttributesKey != null }
+                    ?.let { word to it.forcedTextAttributesKey!!.externalName }
+            }.toMap()
         }
         return result
     }

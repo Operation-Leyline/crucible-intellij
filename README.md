@@ -16,7 +16,7 @@ manifests (`crucible.toml`).
 - Reformat Code with the compiler's own formatter, for a file or a selection
 - Smart indentation, `///` doc comment continuation, brace and quote pairing, line comments and TODOs
 - Live templates for declarations, and Surround With for input, output and structure bodies
-- `crucible.toml` completion and validation from its JSON Schema
+- `crucible.toml` completion, hover docs and validation, and its API policy (naming, paths, documentation) checked as you type, with a rename to the right case
 - Tools | Crucible: check a package and generate a client with the `crucible` CLI
 - New | Crucible File for model files, services and manifests
 
@@ -58,7 +58,7 @@ formatting and semantic highlighting all come from the server, so the editor
 and `cargo build` never disagree. The plugin adds what must be instant or is
 IDE-specific: lexical highlighting before the server answers, indentation,
 brace and quote pairing, comments, TODOs, file and live templates, the
-`crucible.toml` schema and settings. Go to Declaration asks the server
+and settings. Go to Declaration asks the server
 directly, so Ctrl+hover can underline a name before it is clicked: the IDE's
 LSP client resolves names only while the action itself runs.
 

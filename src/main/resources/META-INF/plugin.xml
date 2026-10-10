@@ -6,7 +6,6 @@
 
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.lsp</depends>
-    <depends optional="true" config-file="crucible-json.xml">com.intellij.modules.json</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <fileType name="Crucible" language="Crucible" extensions="cru" fieldName="INSTANCE"

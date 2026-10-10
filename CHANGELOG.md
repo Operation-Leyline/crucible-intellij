@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+- Semantic highlighting, highlighting of other uses and rename now actually
+  go through `crucible-lsp` in `.cru` files. The platform asks a language
+  server for these only in plain-text and TextMate files unless a plugin opts
+  in, so `.cru` files had lexer colors only and the colors by kind never
+  showed.
 - `.cru` file type with lexical highlighting, a color settings page, line
   comments, brace and quote pairing, smart indentation and TODO support.
 - `crucible-lsp` bundled and started through the platform LSP client: the
@@ -23,8 +28,9 @@
 - Enter in a `///` doc comment continues it on the next line.
 - Live templates for structures, unions, enums, errors, resources, operations
   and services, and Surround With for input, output and structure bodies.
-- `crucible.toml` completion, documentation and validation from a bundled
-  JSON Schema, when the JSON and TOML plugins are installed.
+- `crucible.toml` completion, hover documentation and validation come from
+  `crucible-lsp`, which also reports the package's API policy in `.cru`
+  files as you type, with a rename to the configured case as a quick fix.
 - Server arguments and environment variables in the settings.
 - Tools | Crucible | Check Crucible Package and Generate Crucible Client run
   the `crucible` CLI, found from the settings, `CRUCIBLE_CLI`, `PATH` or
