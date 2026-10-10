@@ -1,0 +1,30 @@
+<list>
+    <option name="CRUCIBLE_SERVICE">
+        <value>
+            <option name="FOREGROUND" value="b39df3"/>
+            <option name="FONT_TYPE" value="1"/>
+        </value>
+    </option>
+    <option name="CRUCIBLE_PROTOCOL">
+        <value>
+            <option name="FOREGROUND" value="b39df3"/>
+            <option name="FONT_TYPE" value="2"/>
+        </value>
+    </option>
+    <option name="CRUCIBLE_RESOURCE">
+        <value>
+            <option name="FOREGROUND" value="3dc9b0"/>
+            <option name="FONT_TYPE" value="1"/>
+        </value>
+    </option>
+    <option name="CRUCIBLE_ERROR">
+        <value>
+            <option name="FOREGROUND" value="f75464"/>
+        </value>
+    </option>
+    <option name="CRUCIBLE_RULE">
+        <value>
+            <option name="FOREGROUND" value="d5b778"/>
+        </value>
+    </option>
+</list>

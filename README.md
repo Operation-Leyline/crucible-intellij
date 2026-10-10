@@ -10,10 +10,13 @@ manifests (`crucible.toml`).
 
 - The compiler's errors as you type, across the whole package, with quick fixes
 - Completion that knows where you are: declarations, clauses, types, errors, annotations and constraints
-- Semantic highlighting, with colors under Settings | Editor | Color Scheme | Crucible
-- Go to declaration, find usages, rename and highlighting of other uses
-- Hover documentation, the structure view, folding and Reformat Code
-- Smart indentation, brace and quote pairing, line comments and TODOs
+- Semantic highlighting that tells services, protocols, resources, operations, errors and rules apart, with colors under Settings | Editor | Color Scheme | Crucible
+- Go to declaration (Ctrl+hover underlines what it can reach), go to type declaration, find usages, usage counts above declarations, rename and highlighting of other uses
+- Hover documentation, parameter info, inlay hints, the structure view, breadcrumbs and folding
+- Reformat Code with the compiler's own formatter, for a file or a selection
+- Smart indentation, `///` doc comment continuation, brace and quote pairing, line comments and TODOs
+- Live templates for declarations, and Surround With for input, output and structure bodies
+- `crucible.toml` completion and validation from its JSON Schema
 - New | Crucible File for model files, services and manifests
 
 The plugin bundles `crucible-lsp`, the language server built from Crucible's
@@ -29,8 +32,9 @@ then use Settings | Plugins | ⚙ | Install Plugin from Disk and restart the IDE
 The release ZIP bundles `crucible-lsp` for Linux, macOS (Intel and Apple
 Silicon) and Windows. To use another build, for example one from a Crucible
 checkout, choose it under Settings | Languages & Frameworks | Crucible, or set
-`CRUCIBLE_LSP`. The language server widget in the status bar shows the
-server's state and restarts it.
+`CRUCIBLE_LSP`. The same page takes extra server arguments and environment
+variables. The language server widget in the status bar shows the server's
+state and restarts it.
 
 To get updates automatically, add the release's `updatePlugins.xml` URL as a
 custom plugin repository under Settings | Plugins | ⚙ | Manage Plugin
@@ -45,7 +49,10 @@ IDE's built-in LSP client. Errors, completion, navigation, rename, folding,
 formatting and semantic highlighting all come from the server, so the editor
 and `cargo build` never disagree. The plugin adds what must be instant or is
 IDE-specific: lexical highlighting before the server answers, indentation,
-brace and quote pairing, comments, TODOs, file templates and settings.
+brace and quote pairing, comments, TODOs, file and live templates, the
+`crucible.toml` schema and settings. Go to Declaration asks the server
+directly, so Ctrl+hover can underline a name before it is clicked: the IDE's
+LSP client resolves names only while the action itself runs.
 
 A `.cru` file belongs to the nearest directory above it whose `crucible.toml`
 has a `[model]` table. The server compiles that whole package on every

@@ -4,9 +4,13 @@ import com.intellij.openapi.editor.colors.TextAttributesKey
 import com.intellij.platform.lsp.api.customization.LspSemanticTokensSupport
 
 /**
- * Paints the server's semantic tokens (`TOKEN_TYPES` in
+ * Paints the server's semantic tokens (`TOKEN_TYPES` and `TOKEN_MODIFIERS` in
  * crucible-lsp/src/analysis.rs) with the plugin's own colors, so they match
  * the lexer's and follow Settings | Editor | Color Scheme | Crucible.
+ *
+ * Token types stay standard LSP types so other editors color them sensibly;
+ * what a declaration is (a service, a resource, an error) travels as a
+ * modifier on the declaration and on every reference to it.
  */
 class CrucibleSemanticTokens : LspSemanticTokensSupport() {
     override fun getTextAttributesKey(tokenType: String, modifiers: List<String>): TextAttributesKey? =
@@ -14,6 +18,7 @@ class CrucibleSemanticTokens : LspSemanticTokensSupport() {
 
     companion object {
         fun colorOf(tokenType: String, modifiers: List<String>): TextAttributesKey? {
+            KINDS.firstOrNull { (modifier, _) -> modifier in modifiers }?.let { return it.second }
             val declaration = "declaration" in modifiers
             return when (tokenType) {
                 "keyword" -> CrucibleColors.KEYWORD
@@ -33,5 +38,14 @@ class CrucibleSemanticTokens : LspSemanticTokensSupport() {
                 else -> null
             }
         }
+
+        /** Kind modifiers, which win over the token type; a union keeps the structure colors. */
+        private val KINDS = listOf(
+            "error" to CrucibleColors.ERROR,
+            "service" to CrucibleColors.SERVICE,
+            "protocol" to CrucibleColors.PROTOCOL,
+            "resource" to CrucibleColors.RESOURCE,
+            "rule" to CrucibleColors.RULE,
+        )
     }
 }

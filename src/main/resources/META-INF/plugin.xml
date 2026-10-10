@@ -6,6 +6,7 @@
 
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.lsp</depends>
+    <depends optional="true" config-file="crucible-json.xml">com.intellij.modules.json</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <fileType name="Crucible" language="Crucible" extensions="cru" fieldName="INSTANCE"
@@ -15,15 +16,21 @@
         <lang.syntaxHighlighterFactory language="Crucible"
                                        implementationClass="com.leyline.crucible.intellij.highlighting.CrucibleSyntaxHighlighterFactory"/>
         <colorSettingsPage implementation="com.leyline.crucible.intellij.highlighting.CrucibleColorSettingsPage"/>
+        <additionalTextAttributes scheme="Default" file="colorSchemes/CrucibleDefault.xml"/>
+        <additionalTextAttributes scheme="Darcula" file="colorSchemes/CrucibleDarcula.xml"/>
         <lang.commenter language="Crucible" implementationClass="com.leyline.crucible.intellij.editor.CrucibleCommenter"/>
         <lang.braceMatcher language="Crucible" implementationClass="com.leyline.crucible.intellij.editor.CrucibleBraceMatcher"/>
         <lang.quoteHandler language="Crucible" implementationClass="com.leyline.crucible.intellij.editor.CrucibleQuoteHandler"/>
         <lineIndentProvider implementation="com.leyline.crucible.intellij.editor.CrucibleLineIndentProvider"/>
         <typedHandler implementation="com.leyline.crucible.intellij.editor.CrucibleTypedHandler"/>
+        <enterHandlerDelegate implementation="com.leyline.crucible.intellij.editor.CrucibleDocCommentEnter"/>
+        <liveTemplateContext contextId="CRUCIBLE" implementation="com.leyline.crucible.intellij.editor.CrucibleTemplateContext"/>
+        <defaultLiveTemplates file="/liveTemplates/Crucible.xml"/>
         <indexPatternBuilder implementation="com.leyline.crucible.intellij.editor.CrucibleIndexPatternBuilder"/>
         <langCodeStyleSettingsProvider implementation="com.leyline.crucible.intellij.editor.CrucibleCodeStyleSettingsProvider"/>
 
         <platform.lsp.integrationProvider implementation="com.leyline.crucible.intellij.lsp.CrucibleLspIntegrationProvider"/>
+        <gotoDeclarationHandler implementation="com.leyline.crucible.intellij.lsp.CrucibleGotoDeclarationHandler"/>
 
         <applicationConfigurable parentId="language" id="crucible.settings"
                                  instance="com.leyline.crucible.intellij.settings.CrucibleConfigurable"

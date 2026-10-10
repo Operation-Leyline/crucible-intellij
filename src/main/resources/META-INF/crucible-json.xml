@@ -1,0 +1,6 @@
+<!-- The crucible.toml schema, when the JSON plugin (and with it schema support for TOML) is installed. -->
+<idea-plugin>
+    <extensions defaultExtensionNs="JavaScript">
+        <JsonSchema.ProviderFactory implementation="com.leyline.crucible.intellij.json.CrucibleManifestSchemaFactory"/>
+    </extensions>
+</idea-plugin>

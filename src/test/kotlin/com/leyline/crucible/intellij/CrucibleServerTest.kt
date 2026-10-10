@@ -1,8 +1,11 @@
 package com.leyline.crucible.intellij
 
+import com.google.gson.JsonObject
 import com.intellij.openapi.util.SystemInfo
 import com.leyline.crucible.intellij.highlighting.CrucibleColors
 import com.leyline.crucible.intellij.highlighting.CrucibleSemanticTokens
+import com.leyline.crucible.intellij.lsp.CrucibleCodeLens
+import com.leyline.crucible.intellij.lsp.CrucibleLspClientDescriptor
 import com.leyline.crucible.intellij.lsp.CrucibleServerLocator
 import com.leyline.crucible.intellij.lsp.ServerSource
 import java.io.File
@@ -63,5 +66,43 @@ class CrucibleServerTest {
         assertEquals(CrucibleColors.OPERATION_DECLARATION, CrucibleSemanticTokens.colorOf("function", listOf("declaration")))
         assertEquals(CrucibleColors.DOC_COMMENT, CrucibleSemanticTokens.colorOf("comment", listOf("documentation")))
         assertNull(CrucibleSemanticTokens.colorOf("macro", emptyList()))
+    }
+
+    @Test
+    fun `a declaration's kind colors it and every reference to it`() {
+        assertEquals(CrucibleColors.SERVICE, CrucibleSemanticTokens.colorOf("interface", listOf("declaration", "service")))
+        assertEquals(CrucibleColors.PROTOCOL, CrucibleSemanticTokens.colorOf("interface", listOf("protocol")))
+        assertEquals(CrucibleColors.RESOURCE, CrucibleSemanticTokens.colorOf("class", listOf("resource")))
+        assertEquals(CrucibleColors.ERROR, CrucibleSemanticTokens.colorOf("class", listOf("declaration", "error")))
+        assertEquals(CrucibleColors.ERROR, CrucibleSemanticTokens.colorOf("class", listOf("error")))
+        assertEquals(CrucibleColors.RULE, CrucibleSemanticTokens.colorOf("function", listOf("rule")))
+        // Operations keep the function colors; a union is colored as a structure.
+        assertEquals(CrucibleColors.OPERATION, CrucibleSemanticTokens.colorOf("function", emptyList()))
+        assertEquals(CrucibleColors.TYPE_DECLARATION, CrucibleSemanticTokens.colorOf("struct", listOf("declaration", "union")))
+    }
+
+    @Test
+    fun `the server command line carries the user's arguments and environment`() {
+        val line = CrucibleLspClientDescriptor.commandLine(
+            Path.of("/bin/crucible-lsp"),
+            "--log \"a b\" -v",
+            mapOf("RUST_BACKTRACE" to "1"),
+            "/work",
+        )
+        assertEquals(listOf("--log", "a b", "-v"), line.parametersList.list)
+        assertEquals("1", line.environment["RUST_BACKTRACE"])
+        assertEquals(File("/work"), line.workDirectory)
+        assertTrue(CrucibleLspClientDescriptor.commandLine(Path.of("x"), "", emptyMap(), null).parametersList.list.isEmpty())
+    }
+
+    @Test
+    fun `a usages lens carries the declaration's position`() {
+        val position = JsonObject().apply {
+            addProperty("line", 3)
+            addProperty("character", 9)
+        }
+        assertEquals(3 to 9, CrucibleCodeLens.positionOf(position))
+        assertNull(CrucibleCodeLens.positionOf("file:///a.cru"))
+        assertNull(CrucibleCodeLens.positionOf(JsonObject()))
     }
 }

@@ -1,17 +1,20 @@
 package com.leyline.crucible.intellij.settings
 
+import com.intellij.execution.configuration.EnvironmentVariablesTextFieldWithBrowseButton
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.util.ExecUtil
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.options.BoundSearchableConfigurable
+import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.ui.DialogPanel
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.dsl.builder.AlignX
 import com.intellij.ui.dsl.builder.bindSelected
 import com.intellij.ui.dsl.builder.bindText
 import com.intellij.ui.dsl.builder.panel
+import com.intellij.ui.dsl.builder.toMutableProperty
 import com.intellij.ui.layout.selected
 import com.leyline.crucible.intellij.CrucibleBundle
 import com.leyline.crucible.intellij.lsp.CrucibleLspIntegrationProvider
@@ -43,6 +46,21 @@ class CrucibleConfigurable : BoundSearchableConfigurable(
             }
             row {
                 comment(CrucibleBundle.message("settings.server.automatic.comment"))
+            }
+            row(CrucibleBundle.message("settings.server.arguments")) {
+                expandableTextField()
+                    .bindText(settings::serverArguments)
+                    .align(AlignX.FILL)
+            }
+            row(CrucibleBundle.message("settings.server.environment")) {
+                // Application settings: no project of their own to offer `.env` files from.
+                cell(EnvironmentVariablesTextFieldWithBrowseButton(ProjectManager.getInstance().defaultProject))
+                    .bind(
+                        { field -> field.envs },
+                        { field, environment -> field.envs = environment },
+                        settings::serverEnvironment.toMutableProperty(),
+                    )
+                    .align(AlignX.FILL)
             }
             row {
                 val status = comment("").component
