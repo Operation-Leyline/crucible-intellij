@@ -26,3 +26,6 @@
 - `crucible.toml` completion, documentation and validation from a bundled
   JSON Schema, when the JSON and TOML plugins are installed.
 - Server arguments and environment variables in the settings.
+- Tools | Crucible | Check Crucible Package and Generate Crucible Client run
+  the `crucible` CLI, found from the settings, `CRUCIBLE_CLI`, `PATH` or
+  Cargo's bin directory.

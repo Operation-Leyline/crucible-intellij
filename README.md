@@ -17,6 +17,7 @@ manifests (`crucible.toml`).
 - Smart indentation, `///` doc comment continuation, brace and quote pairing, line comments and TODOs
 - Live templates for declarations, and Surround With for input, output and structure bodies
 - `crucible.toml` completion and validation from its JSON Schema
+- Tools | Crucible: check a package and generate a client with the `crucible` CLI
 - New | Crucible File for model files, services and manifests
 
 The plugin bundles `crucible-lsp`, the language server built from Crucible's
@@ -35,6 +36,13 @@ checkout, choose it under Settings | Languages & Frameworks | Crucible, or set
 `CRUCIBLE_LSP`. The same page takes extra server arguments and environment
 variables. The language server widget in the status bar shows the server's
 state and restarts it.
+
+Tools | Crucible (also in the project view and editor context menus of a
+package's files) runs the `crucible` CLI, which is not bundled: Check Crucible
+Package runs `crucible check`, and Generate Crucible Client asks for a client
+target and its options, then runs `crucible generate` into the chosen
+directory. The plugin finds the CLI from the settings, `CRUCIBLE_CLI`, `PATH`
+or Cargo's bin directory.
 
 To get updates automatically, add the release's `updatePlugins.xml` URL as a
 custom plugin repository under Settings | Plugins | ⚙ | Manage Plugin

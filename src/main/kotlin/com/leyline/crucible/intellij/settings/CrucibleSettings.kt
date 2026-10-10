@@ -19,6 +19,8 @@ class CrucibleSettings : SimplePersistentStateComponent<CrucibleSettings.State>(
         var serverArguments by string()
         /** Variables added to the server's environment, for example `RUST_BACKTRACE`. */
         var serverEnvironment by map<String, String>()
+        /** The `crucible` CLI for Check and Generate; blank finds it automatically. */
+        var cliPath by string()
     }
 
     var useCustomServer: Boolean
@@ -44,6 +46,12 @@ class CrucibleSettings : SimplePersistentStateComponent<CrucibleSettings.State>(
         set(value) {
             // A new map, not one changed in place, so the state sees the modification.
             state.serverEnvironment = value.toMutableMap()
+        }
+
+    var cliPath: String
+        get() = state.cliPath.orEmpty()
+        set(value) {
+            state.cliPath = value.ifBlank { null }
         }
 
     companion object {

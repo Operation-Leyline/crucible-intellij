@@ -71,6 +71,17 @@ class CrucibleConfigurable : BoundSearchableConfigurable(
                 }
             }
         }
+        group(CrucibleBundle.message("settings.cli.group")) {
+            row(CrucibleBundle.message("settings.cli.path")) {
+                textFieldWithBrowseButton(
+                    FileChooserDescriptorFactory.singleFile()
+                        .withTitle(CrucibleBundle.message("settings.cli.browse")),
+                )
+                    .bindText(settings::cliPath)
+                    .align(AlignX.FILL)
+                    .comment(CrucibleBundle.message("settings.cli.comment"))
+            }
+        }
     }
 
     override fun apply() {
