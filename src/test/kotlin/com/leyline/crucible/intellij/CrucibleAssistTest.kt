@@ -4,15 +4,13 @@ import com.intellij.codeInsight.template.TemplateActionContext
 import com.intellij.codeInsight.template.impl.TemplateManagerImpl
 import com.intellij.codeInsight.template.impl.TemplateSettings
 import com.intellij.testFramework.LightVirtualFile
-import com.jetbrains.jsonSchema.ide.JsonSchemaService
-import com.leyline.crucible.intellij.json.CrucibleManifestSchema
 import com.leyline.crucible.intellij.highlighting.CrucibleSemanticTokens
 import com.leyline.crucible.intellij.lsp.CrucibleDocumentHighlights
 import com.leyline.crucible.intellij.lsp.CrucibleFormatting
 import com.leyline.crucible.intellij.lsp.CrucibleRename
 import com.leyline.crucible.intellij.lsp.CrucibleGotoDeclarationHandler
 
-/** Typing assistance, templates, the manifest schema and the LSP customizations. */
+/** Typing assistance, templates and the LSP customizations. */
 class CrucibleAssistTest : CrucibleTestCase() {
     fun `test enter in a doc comment continues it at its indentation`() {
         myFixture.configureByText("a.cru", "structure A {\n    /// The name.<caret>\n    name: string\n}\n")
@@ -64,25 +62,6 @@ class CrucibleAssistTest : CrucibleTestCase() {
         myFixture.type("Item")
         TemplateManagerImpl.getTemplateState(myFixture.editor)!!.gotoEnd(false)
         myFixture.checkResult("structure Item {\n    <caret>\n}\n")
-    }
-
-    fun `test crucible toml gets the manifest schema`() {
-        val file = myFixture.configureByText("crucible.toml", "[model]\n<caret>\n")
-        val schemas = JsonSchemaService.Impl.get(project).getSchemaFilesForFile(file.virtualFile)
-        assertTrue("schemas: $schemas", schemas.any { it == CrucibleManifestSchema.schemaFile })
-        assertNotNull(JsonSchemaService.Impl.get(project).getSchemaObject(file))
-        assertFalse(CrucibleManifestSchema.isAvailable(LightVirtualFile("Cargo.toml")))
-    }
-
-    fun `test manifest keys complete from the schema`() {
-        myFixture.configureByText("crucible.toml", "[model]\n<caret>\n")
-        myFixture.completeBasic()
-        val model = myFixture.lookupElementStrings.orEmpty()
-        assertTrue("completions: $model", model.containsAll(listOf("namespace", "sources", "imports")))
-        myFixture.configureByText("crucible.toml", "schema_version = 1\n\n[rules.naming]\n<caret>\n")
-        myFixture.completeBasic()
-        val naming = myFixture.lookupElementStrings.orEmpty()
-        assertTrue("completions: $naming", naming.containsAll(listOf("severity", "operations", "members")))
     }
 
     fun `test the server colors, highlights and renames in cru files but not elsewhere`() {

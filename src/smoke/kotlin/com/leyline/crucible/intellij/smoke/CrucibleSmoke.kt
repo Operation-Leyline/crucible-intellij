@@ -154,6 +154,17 @@ class CrucibleSmoke : ApplicationStarter {
         }
         report("go to declaration (and the Ctrl+hover underline) resolve through the server")
 
+        // The package's policy, in its crucible.toml, shows as a warning.
+        var warnings = emptyList<String>()
+        val policyDeadline = System.nanoTime() + 60_000_000_000L
+        while (System.nanoTime() < policyDeadline) {
+            warnings = problems(project, file, HighlightSeverity.WARNING)
+            if (warnings.any { "is not camelCase" in it }) break
+            Thread.sleep(500)
+        }
+        check(warnings.any { "operation name `GetItem` is not camelCase" in it }) { "editor warnings: $warnings" }
+        report("the package policy shows in the editor $warnings")
+
         checkReformat(project, root)
         println("CRUCIBLE_SMOKE_OK: the editor integration works end to end")
     }
@@ -202,13 +213,16 @@ class CrucibleSmoke : ApplicationStarter {
     }
 
     /** The errors the daemon's main passes produce, as an open editor shows them. */
-    private fun errors(project: Project, file: VirtualFile): List<String> {
+    private fun errors(project: Project, file: VirtualFile): List<String> = problems(project, file, HighlightSeverity.ERROR)
+
+    /** The problems of exactly `severity` the daemon's main passes produce. */
+    private fun problems(project: Project, file: VirtualFile, severity: HighlightSeverity): List<String> {
         var result = emptyList<String>()
         ApplicationManager.getApplication().invokeAndWait {
             result = MainPassesRunner(project, "Crucible smoke", null)
-                .runMainPasses(listOf(file), HighlightSeverity.ERROR)
+                .runMainPasses(listOf(file), severity)
                 .values.flatten()
-                .filter { it.severity == HighlightSeverity.ERROR }
+                .filter { it.severity == severity }
                 .mapNotNull { it.description }
         }
         return result

@@ -45,10 +45,6 @@ dependencies {
         } else {
             create(providers.gradleProperty("platformType"), providers.gradleProperty("platformVersion"))
         }
-        // crucible.toml's JSON schema; optional at runtime (crucible-json.xml).
-        bundledPlugin("com.intellij.modules.json")
-        // The TOML plugin applies the schema; tests check that end to end.
-        testBundledPlugin("org.toml.lang")
         testFramework(TestFrameworkType.Platform)
     }
 }

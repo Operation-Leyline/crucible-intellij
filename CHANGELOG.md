@@ -28,8 +28,9 @@
 - Enter in a `///` doc comment continues it on the next line.
 - Live templates for structures, unions, enums, errors, resources, operations
   and services, and Surround With for input, output and structure bodies.
-- `crucible.toml` completion, documentation and validation from a bundled
-  JSON Schema, when the JSON and TOML plugins are installed.
+- `crucible.toml` completion, hover documentation and validation come from
+  `crucible-lsp`, which also reports the package's API policy in `.cru`
+  files as you type, with a rename to the configured case as a quick fix.
 - Server arguments and environment variables in the settings.
 - Tools | Crucible | Check Crucible Package and Generate Crucible Client run
   the `crucible` CLI, found from the settings, `CRUCIBLE_CLI`, `PATH` or
