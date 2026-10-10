@@ -112,7 +112,9 @@ class GenerateCrucibleClientAction : CrucibleCliAction() {
         val dialog = GenerateClientDialog(project, packageDir)
         if (!dialog.showAndGet()) return
         val target = dialog.target
-        val out = Path.of(dialog.outDirectory)
+        // The CLI runs in the package directory; resolve here too, so the
+        // directory refreshed afterwards is the one written.
+        val out = packageDir.resolve(dialog.outDirectory.trim()).normalize()
         run(
             project,
             CrucibleBundle.message("cli.generate.title", target.id),

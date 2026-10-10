@@ -64,7 +64,8 @@ object CrucibleCli {
  */
 object CruciblePackages {
     private val MODEL = Regex("""^\s*(\[\s*model\s*[.\]]|model\s*\.)""", RegexOption.MULTILINE)
-    private val NAMESPACE = Regex("""^\s*namespace\s*=\s*"([^"]*)"""", RegexOption.MULTILINE)
+    private val TABLE = Regex("""^\s*\[\[?\s*([^\]]*?)\s*]""")
+    private val STRING_KEY = Regex("""^\s*([A-Za-z0-9_.\-\s]+?)\s*=\s*"([^"]*)"""")
 
     /** The package `path` (a file or directory) belongs to: the nearest such directory at or above it. */
     fun packageOf(path: Path): Path? {
@@ -78,10 +79,24 @@ object CruciblePackages {
 
     fun isPackage(dir: Path): Boolean = manifest(dir)?.let { MODEL.containsMatchIn(it) } == true
 
-    /** The package namespace, used to suggest package and module names. */
-    fun namespace(dir: Path): String? = manifest(dir)?.let { text ->
-        val model = MODEL.find(text) ?: return@let null
-        NAMESPACE.find(text, model.range.first)?.groupValues?.get(1)?.takeIf { it.isNotBlank() }
+    /**
+     * The package namespace, used to suggest package and module names: the
+     * `namespace` key of the `[model]` table, or a top-level `model.namespace`.
+     * A `namespace` in another table is not it.
+     */
+    fun namespace(dir: Path): String? {
+        val text = manifest(dir) ?: return null
+        var table = ""
+        for (line in text.lines()) {
+            TABLE.find(line)?.let {
+                table = it.groupValues[1].filterNot(Char::isWhitespace)
+                continue
+            }
+            val (key, value) = STRING_KEY.find(line)?.destructured ?: continue
+            val path = listOf(table, key.filterNot(Char::isWhitespace)).filter { it.isNotEmpty() }.joinToString(".")
+            if (path == "model.namespace") return value.takeIf { it.isNotBlank() }
+        }
+        return null
     }
 
     private fun manifest(dir: Path): String? = runCatching {

@@ -46,6 +46,12 @@ class CrucibleAssistTest : CrucibleTestCase() {
         myFixture.configureByText("b.cru", "// <caret>\n")
         val inComment = TemplateManagerImpl.listApplicableTemplates(TemplateActionContext.expanding(myFixture.file, myFixture.editor))
         assertFalse(inComment.any { it.groupName == "Crucible" })
+        myFixture.configureByText("c.cru", "@since(\"1<caret>")
+        val inOpenString = TemplateManagerImpl.listApplicableTemplates(TemplateActionContext.expanding(myFixture.file, myFixture.editor))
+        assertFalse(inOpenString.any { it.groupName == "Crucible" })
+        myFixture.configureByText("d.cru", "@since(\"1\") <caret>")
+        val afterString = TemplateManagerImpl.listApplicableTemplates(TemplateActionContext.expanding(myFixture.file, myFixture.editor))
+        assertTrue(afterString.any { it.key == "operation" })
     }
 
     fun `test a template expands`() {

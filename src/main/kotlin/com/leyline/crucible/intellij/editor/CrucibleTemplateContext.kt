@@ -16,7 +16,18 @@ class CrucibleTemplateContext : TemplateContextType("Crucible") {
         if (file.findElementAt(offset)?.node?.elementType.let { it in CrucibleTokenTypes.COMMENTS.types || it == CrucibleTokenTypes.STRING }) {
             return false
         }
-        // A comment runs to the end of its line, so a caret there is still in it.
-        return offset == 0 || file.findElementAt(offset - 1)?.node?.elementType !in CrucibleTokenTypes.COMMENTS.types
+        if (offset == 0) return true
+        val previous = file.findElementAt(offset - 1)?.node ?: return true
+        // A comment runs to the end of its line, so a caret there is still in
+        // it; so is a caret after a string that has not been closed yet.
+        return previous.elementType !in CrucibleTokenTypes.COMMENTS.types &&
+            !(previous.elementType == CrucibleTokenTypes.STRING && !isClosed(previous.text))
+    }
+
+    /** A string token ends in a quote that no backslash escapes. */
+    private fun isClosed(text: String): Boolean {
+        if (text.length < 2 || !text.endsWith('"')) return false
+        val backslashes = text.dropLast(1).takeLastWhile { it == '\\' }.length
+        return backslashes % 2 == 0
     }
 }
