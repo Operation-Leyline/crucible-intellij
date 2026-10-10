@@ -57,7 +57,7 @@ IDE's built-in LSP client. Errors, completion, navigation, rename, folding,
 formatting and semantic highlighting all come from the server, so the editor
 and `cargo build` never disagree. The plugin adds what must be instant or is
 IDE-specific: lexical highlighting before the server answers, indentation,
-brace and quote pairing, comments, TODOs, file and live templates, the
+brace and quote pairing, comments, TODOs, file and live templates,
 and settings. Go to Declaration asks the server
 directly, so Ctrl+hover can underline a name before it is clicked: the IDE's
 LSP client resolves names only while the action itself runs.
