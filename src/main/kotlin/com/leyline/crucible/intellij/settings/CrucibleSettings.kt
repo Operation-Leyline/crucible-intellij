@@ -15,6 +15,12 @@ class CrucibleSettings : SimplePersistentStateComponent<CrucibleSettings.State>(
         /** Use [serverPath] instead of finding the server automatically. */
         var useCustomServer by property(false)
         var serverPath by string()
+        /** Extra command-line arguments, split as a shell would split them. */
+        var serverArguments by string()
+        /** Variables added to the server's environment, for example `RUST_BACKTRACE`. */
+        var serverEnvironment by map<String, String>()
+        /** The `crucible` CLI for Check and Generate; blank finds it automatically. */
+        var cliPath by string()
     }
 
     var useCustomServer: Boolean
@@ -27,6 +33,25 @@ class CrucibleSettings : SimplePersistentStateComponent<CrucibleSettings.State>(
         get() = state.serverPath.orEmpty()
         set(value) {
             state.serverPath = value.ifBlank { null }
+        }
+
+    var serverArguments: String
+        get() = state.serverArguments.orEmpty()
+        set(value) {
+            state.serverArguments = value.ifBlank { null }
+        }
+
+    var serverEnvironment: Map<String, String>
+        get() = state.serverEnvironment.toMap()
+        set(value) {
+            // A new map, not one changed in place, so the state sees the modification.
+            state.serverEnvironment = value.toMutableMap()
+        }
+
+    var cliPath: String
+        get() = state.cliPath.orEmpty()
+        set(value) {
+            state.cliPath = value.ifBlank { null }
         }
 
     companion object {

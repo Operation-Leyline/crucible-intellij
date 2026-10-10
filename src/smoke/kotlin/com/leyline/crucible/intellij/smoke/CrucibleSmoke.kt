@@ -1,24 +1,32 @@
 package com.leyline.crucible.intellij.smoke
 
+import com.intellij.codeInsight.actions.ReformatCodeProcessor
 import com.intellij.codeInsight.daemon.impl.MainPassesRunner
 import com.intellij.lang.annotation.HighlightSeverity
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ApplicationStarter
+import com.intellij.openapi.application.WriteAction
+import com.intellij.openapi.editor.Document
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.fileTypes.SyntaxHighlighterFactory
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
+import com.intellij.openapi.util.Computable
 import com.intellij.openapi.vfs.LocalFileSystem
+import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.platform.lsp.api.LspClient
 import com.intellij.platform.lsp.api.LspClientManager
 import com.intellij.platform.lsp.api.LspServerState
+import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiManager
 import com.leyline.crucible.intellij.CrucibleFileType
 import com.leyline.crucible.intellij.CrucibleLanguage
 import com.leyline.crucible.intellij.highlighting.CrucibleSyntaxHighlighter
+import com.leyline.crucible.intellij.lsp.CrucibleGotoDeclarationHandler
 import com.leyline.crucible.intellij.lsp.CrucibleLspIntegrationProvider
 import com.leyline.crucible.intellij.lsp.CrucibleServerLocator
 import com.leyline.crucible.intellij.lsp.ServerSource
@@ -110,8 +118,60 @@ class CrucibleSmoke : ApplicationStarter {
         val completion = client.sendRequestSync(10_000) { it.textDocumentService.completion(CompletionParams(document, typeAt)) }
         val labels = completion?.left?.map { it.label }.orEmpty()
         check("ItemId" in labels && "string" in labels) { "completion: $labels" }
-        println("CRUCIBLE_SMOKE_OK: hover, semantic tokens and completion answer through the IDE's client")
+        report("hover, semantic tokens and completion answer through the IDE's client")
+
+        // The colors by kind and the usage lenses depend on what the server advertises.
+        val capabilities = client.initializeResult?.capabilities ?: fail("no initialize result")
+        val modifiers = capabilities.semanticTokensProvider?.legend?.tokenModifiers.orEmpty()
+        check(modifiers.containsAll(listOf("service", "protocol", "resource", "error", "rule"))) { "token modifiers: $modifiers" }
+        check(capabilities.codeLensProvider != null) { "no code lens provider" }
+        report("the server advertises kind modifiers $modifiers and code lenses")
+
+        // Ctrl+hover and Ctrl+click: the declaration handler asks the server.
+        val referenceOffset = text.indexOf("other: ItemId") + "other: ".length
+        val targets = read<Array<PsiElement>?> {
+            val source = PsiManager.getInstance(project).findFile(file)?.findElementAt(referenceOffset)
+            CrucibleGotoDeclarationHandler().getGotoDeclarationTargets(source, referenceOffset, null)
+        }.orEmpty()
+        val target = targets.singleOrNull() ?: fail("go to declaration targets: ${targets.toList()}")
+        val targetFile = read<String?> { target.containingFile?.name }
+        check(targetFile == "types.cru" && read<String> { target.text } == "ItemId") {
+            "go to declaration went to ${target.text} in $targetFile"
+        }
+        report("go to declaration (and the Ctrl+hover underline) resolve through the server")
+
+        checkReformat(project, root)
+        println("CRUCIBLE_SMOKE_OK: the editor integration works end to end")
     }
+
+    /** Reformat Code runs the compiler's formatter: blank edge lines go, members indent, one final newline. */
+    private fun checkReformat(project: Project, root: Path) {
+        val messy = "\n\n\nstructure Messy {\nname: string   \n}\n\n\n"
+        val expected = "structure Messy {\n    name: string\n}\n"
+        var formatFile: VirtualFile? = null
+        ApplicationManager.getApplication().invokeAndWait {
+            WriteAction.run<Throwable> {
+                val dir = LocalFileSystem.getInstance().refreshAndFindFileByNioFile(root.resolve("api")) ?: fail("no api/")
+                formatFile = dir.createChildData(this, "messy.cru").also { VfsUtil.saveText(it, messy) }
+            }
+            FileEditorManager.getInstance(project).openFile(formatFile!!, true)
+        }
+        val document = read<Document?> { FileDocumentManager.getInstance().getDocument(formatFile!!) } ?: fail("no document for messy.cru")
+        // The server learns of the file through the editor; give it a moment, then reformat until it answers.
+        val deadline = System.nanoTime() + 60_000_000_000L
+        while (System.nanoTime() < deadline) {
+            ApplicationManager.getApplication().invokeAndWait {
+                val psi = PsiManager.getInstance(project).findFile(formatFile!!) ?: return@invokeAndWait
+                ReformatCodeProcessor(psi, false).run()
+            }
+            Thread.sleep(1_000)
+            if (read<String> { document.text } == expected) break
+        }
+        val formatted = read<String> { document.text }
+        check(formatted == expected) { "reformat gave ${formatted.replace("\n", "\\n")}" }
+        report("Reformat Code goes through crucible-lsp")
+    }
+
     private fun awaitClient(project: Project): LspClient {
         val deadline = System.nanoTime() + 60_000_000_000L
         while (System.nanoTime() < deadline) {
@@ -147,6 +207,8 @@ class CrucibleSmoke : ApplicationStarter {
         val line = text.substring(0, offset).count { it == '\n' }
         return Position(line, offset - (text.lastIndexOf('\n', offset - 1) + 1))
     }
+
+    private fun <T> read(compute: () -> T): T = ApplicationManager.getApplication().runReadAction(Computable { compute() })
 
     private fun report(message: String) = println("CRUCIBLE_SMOKE: $message")
 

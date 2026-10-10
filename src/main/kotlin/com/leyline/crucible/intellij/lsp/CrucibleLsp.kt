@@ -1,10 +1,15 @@
 package com.leyline.crucible.intellij.lsp
 
+import com.google.gson.JsonObject
 import com.intellij.execution.ExecutionException
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.notification.NotificationAction
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
+import com.intellij.openapi.actionSystem.ActionManager
+import com.intellij.openapi.actionSystem.ActionPlaces
+import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
@@ -14,14 +19,23 @@ import com.intellij.platform.lsp.api.LspClient
 import com.intellij.platform.lsp.api.LspClientManager
 import com.intellij.platform.lsp.api.LspIntegrationProvider
 import com.intellij.platform.lsp.api.ProjectWideLspClientDescriptor
+import com.intellij.platform.lsp.api.customization.LspCodeLensCustomizer
+import com.intellij.platform.lsp.api.customization.LspCodeLensSupport
 import com.intellij.platform.lsp.api.customization.LspCustomization
+import com.intellij.platform.lsp.api.customization.LspFormattingCustomizer
+import com.intellij.platform.lsp.api.customization.LspFormattingSupport
 import com.intellij.platform.lsp.api.customization.LspSemanticTokensCustomizer
 import com.intellij.platform.lsp.api.lsWidget.LspClientWidgetItem
+import com.intellij.util.execution.ParametersListUtil
 import com.leyline.crucible.intellij.CrucibleBundle
 import com.leyline.crucible.intellij.CrucibleIcons
 import com.leyline.crucible.intellij.highlighting.CrucibleSemanticTokens
 import com.leyline.crucible.intellij.settings.CrucibleConfigurable
+import com.leyline.crucible.intellij.settings.CrucibleSettings
+import java.awt.event.MouseEvent
 import java.nio.charset.StandardCharsets
+import java.nio.file.Path
+import org.eclipse.lsp4j.Command
 
 /** `.cru` files and package manifests, which the server checks too. */
 internal fun isCrucibleFile(file: VirtualFile): Boolean =
@@ -79,12 +93,73 @@ class CrucibleLspClientDescriptor(project: Project) : ProjectWideLspClientDescri
     override fun createCommandLine(): GeneralCommandLine {
         val server = CrucibleServerLocator.find()
             ?: throw ExecutionException(CrucibleBundle.message("notification.server.missing.title"))
-        return GeneralCommandLine(server.path.toString())
-            .withCharset(StandardCharsets.UTF_8)
-            .apply { project.basePath?.let { withWorkDirectory(it) } }
+        val settings = CrucibleSettings.getInstance()
+        return commandLine(server.path, settings.serverArguments, settings.serverEnvironment, project.basePath)
     }
 
     override val lspCustomization: LspCustomization = object : LspCustomization() {
         override val semanticTokensCustomizer: LspSemanticTokensCustomizer = CrucibleSemanticTokens()
+        override val formattingCustomizer: LspFormattingCustomizer = CrucibleFormatting()
+        override val codeLensCustomizer: LspCodeLensCustomizer = CrucibleCodeLens()
+    }
+
+    companion object {
+        /** The server's command line with the user's extra arguments and environment. */
+        fun commandLine(server: Path, arguments: String, environment: Map<String, String>, workDirectory: String?): GeneralCommandLine =
+            GeneralCommandLine(server.toString())
+                .withParameters(ParametersListUtil.parse(arguments))
+                .withEnvironment(environment)
+                .withCharset(StandardCharsets.UTF_8)
+                .apply { workDirectory?.let { withWorkDirectory(it) } }
+    }
+}
+
+/**
+ * Reformat Code on a `.cru` file always runs the compiler's formatter. The
+ * platform's default sends it to the server only when the IDE cannot format
+ * the file itself and the server explicitly asks to; for `.cru` the server's
+ * formatter is the only one that knows the language. `crucible.toml` stays
+ * with the TOML plugin's formatter.
+ */
+class CrucibleFormatting : LspFormattingSupport() {
+    override fun shouldFormatThisFileExclusivelyByServer(
+        file: VirtualFile,
+        ideCanFormatThisFileItself: Boolean,
+        serverExplicitlyWantsToFormatThisFile: Boolean,
+    ): Boolean = file.extension == "cru"
+}
+
+/**
+ * The server's "N usages" lenses carry `crucible.showReferences` with the
+ * declaration's position; clicking one shows its usages as Ctrl+click on the
+ * name would, instead of asking the server to run a command it does not have.
+ */
+class CrucibleCodeLens : LspCodeLensSupport() {
+    override fun codeLensClicked(lspClient: LspClient, contextFile: VirtualFile, command: Command, mouseEvent: MouseEvent?) {
+        if (command.command != SHOW_REFERENCES) {
+            super.codeLensClicked(lspClient, contextFile, command, mouseEvent)
+            return
+        }
+        val (line, character) = positionOf(command.arguments?.getOrNull(1)) ?: return
+        val project = lspClient.project
+        val editor = FileEditorManager.getInstance(project)
+            .openTextEditor(OpenFileDescriptor(project, contextFile, line, character), true) ?: return
+        val action = ActionManager.getInstance().getAction(SHOW_USAGES_ACTION) ?: return
+        ActionManager.getInstance().tryToExecute(action, mouseEvent, editor.contentComponent, ActionPlaces.EDITOR_INLAY, true)
+    }
+
+    companion object {
+        const val SHOW_REFERENCES = "crucible.showReferences"
+
+        /** The platform's Show Usages popup (Ctrl+Alt+F7). */
+        private const val SHOW_USAGES_ACTION = "ShowUsages"
+
+        /** An LSP `Position` argument, as lsp4j hands it over: a JSON object. */
+        fun positionOf(argument: Any?): Pair<Int, Int>? {
+            val json = argument as? JsonObject ?: return null
+            val line = json.get("line")?.takeIf { it.isJsonPrimitive }?.asInt ?: return null
+            val character = json.get("character")?.takeIf { it.isJsonPrimitive }?.asInt ?: return null
+            return line to character
+        }
     }
 }

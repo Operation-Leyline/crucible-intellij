@@ -1,0 +1,67 @@
+<templateSet group="Crucible">
+  <template name="structure" value="structure $NAME$ {&#10;    $END$&#10;}" description="Structure declaration" toReformat="false" toShortenFQNames="false">
+    <variable name="NAME" expression="" defaultValue="&quot;Name&quot;" alwaysStopAt="true" />
+    <context>
+      <option name="CRUCIBLE" value="true" />
+    </context>
+  </template>
+  <template name="union" value="union $NAME$ {&#10;    $END$&#10;}" description="Union declaration" toReformat="false" toShortenFQNames="false">
+    <variable name="NAME" expression="" defaultValue="&quot;Name&quot;" alwaysStopAt="true" />
+    <context>
+      <option name="CRUCIBLE" value="true" />
+    </context>
+  </template>
+  <template name="enum" value="enum $NAME$ {&#10;    $VALUE$$END$&#10;}" description="Enum declaration" toReformat="false" toShortenFQNames="false">
+    <variable name="NAME" expression="" defaultValue="&quot;Name&quot;" alwaysStopAt="true" />
+    <variable name="VALUE" expression="" defaultValue="&quot;VALUE&quot;" alwaysStopAt="true" />
+    <context>
+      <option name="CRUCIBLE" value="true" />
+    </context>
+  </template>
+  <template name="error" value="error $NAME$ {&#10;    status $STATUS$&#10;    message: string$END$&#10;}" description="Error declaration with a status and a message" toReformat="false" toShortenFQNames="false">
+    <variable name="NAME" expression="" defaultValue="&quot;NameError&quot;" alwaysStopAt="true" />
+    <variable name="STATUS" expression="enum(&quot;400&quot;, &quot;404&quot;, &quot;409&quot;, &quot;429&quot;, &quot;500&quot;)" defaultValue="&quot;400&quot;" alwaysStopAt="true" />
+    <context>
+      <option name="CRUCIBLE" value="true" />
+    </context>
+  </template>
+  <template name="resource" value="resource $NAME$ {&#10;    id $ID$: $TYPE$$END$&#10;}" description="Resource declaration with an identifier" toReformat="false" toShortenFQNames="false">
+    <variable name="NAME" expression="" defaultValue="&quot;Name&quot;" alwaysStopAt="true" />
+    <variable name="ID" expression="" defaultValue="&quot;id&quot;" alwaysStopAt="true" />
+    <variable name="TYPE" expression="" defaultValue="&quot;string&quot;" alwaysStopAt="true" />
+    <context>
+      <option name="CRUCIBLE" value="true" />
+    </context>
+  </template>
+  <template name="operation" value="operation $NAME$ {&#10;    http $METHOD$ &quot;$PATH$&quot;&#10;&#10;    input {&#10;        $END$&#10;    }&#10;&#10;    output {&#10;    }&#10;}" description="Operation with an HTTP binding, input and output" toReformat="false" toShortenFQNames="false">
+    <variable name="NAME" expression="" defaultValue="&quot;Name&quot;" alwaysStopAt="true" />
+    <variable name="METHOD" expression="enum(&quot;GET&quot;, &quot;POST&quot;, &quot;PUT&quot;, &quot;PATCH&quot;, &quot;DELETE&quot;)" defaultValue="&quot;GET&quot;" alwaysStopAt="true" />
+    <variable name="PATH" expression="" defaultValue="&quot;/&quot;" alwaysStopAt="true" />
+    <context>
+      <option name="CRUCIBLE" value="true" />
+    </context>
+  </template>
+  <template name="service" value="service $NAME$ {&#10;    version &quot;$VERSION$&quot;&#10;    protocol json&#10;&#10;    operations [$END$]&#10;    resources []&#10;    errors []&#10;}" description="Service declaration" toReformat="false" toShortenFQNames="false">
+    <variable name="NAME" expression="" defaultValue="&quot;Name&quot;" alwaysStopAt="true" />
+    <variable name="VERSION" expression="date(&quot;yyyy-MM-dd&quot;)" defaultValue="" alwaysStopAt="true" />
+    <context>
+      <option name="CRUCIBLE" value="true" />
+    </context>
+  </template>
+  <template name="input" value="input {&#10;    $SELECTION$$END$&#10;}" description="Surround with an operation input" toReformat="false" toShortenFQNames="false">
+    <context>
+      <option name="CRUCIBLE" value="true" />
+    </context>
+  </template>
+  <template name="output" value="output {&#10;    $SELECTION$$END$&#10;}" description="Surround with an operation output" toReformat="false" toShortenFQNames="false">
+    <context>
+      <option name="CRUCIBLE" value="true" />
+    </context>
+  </template>
+  <template name="struct" value="structure $NAME$ {&#10;    $SELECTION$$END$&#10;}" description="Surround with a structure" toReformat="false" toShortenFQNames="false">
+    <variable name="NAME" expression="" defaultValue="&quot;Name&quot;" alwaysStopAt="true" />
+    <context>
+      <option name="CRUCIBLE" value="true" />
+    </context>
+  </template>
+</templateSet>

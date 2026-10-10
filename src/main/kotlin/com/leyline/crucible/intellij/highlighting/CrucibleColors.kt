@@ -7,7 +7,9 @@ import com.intellij.openapi.editor.colors.TextAttributesKey.createTextAttributes
 /**
  * Every color the plugin uses, each falling back to the matching platform
  * color so any scheme looks right. The lexer and the language server's
- * semantic tokens share these keys.
+ * semantic tokens share these keys. The kinds a model is read by (services,
+ * protocols, resources, errors and rules) get colors of their own in the
+ * bundled schemes (`colorSchemes/`), since no platform color fits them.
  */
 object CrucibleColors {
     @JvmField val KEYWORD = key("CRUCIBLE_KEYWORD", Defaults.KEYWORD)
@@ -16,6 +18,11 @@ object CrucibleColors {
     @JvmField val TYPE_DECLARATION = key("CRUCIBLE_TYPE_DECLARATION", Defaults.CLASS_NAME)
     @JvmField val OPERATION = key("CRUCIBLE_OPERATION", Defaults.FUNCTION_CALL)
     @JvmField val OPERATION_DECLARATION = key("CRUCIBLE_OPERATION_DECLARATION", Defaults.FUNCTION_DECLARATION)
+    @JvmField val SERVICE = key("CRUCIBLE_SERVICE", Defaults.INTERFACE_NAME)
+    @JvmField val PROTOCOL = key("CRUCIBLE_PROTOCOL", Defaults.INTERFACE_NAME)
+    @JvmField val RESOURCE = key("CRUCIBLE_RESOURCE", Defaults.CLASS_NAME)
+    @JvmField val ERROR = key("CRUCIBLE_ERROR", Defaults.CLASS_NAME)
+    @JvmField val RULE = key("CRUCIBLE_RULE", Defaults.STATIC_METHOD)
     @JvmField val MEMBER = key("CRUCIBLE_MEMBER", Defaults.INSTANCE_FIELD)
     @JvmField val ENUM_VALUE = key("CRUCIBLE_ENUM_VALUE", Defaults.CONSTANT)
     @JvmField val ANNOTATION = key("CRUCIBLE_ANNOTATION", Defaults.METADATA)

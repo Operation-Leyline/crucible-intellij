@@ -7,7 +7,6 @@ import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.fileTypes.SyntaxHighlighterFactory
 import com.intellij.psi.codeStyle.LanguageCodeStyleSettingsProvider
 import com.intellij.psi.search.PsiTodoSearchHelper
-import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.leyline.crucible.intellij.actions.CreateCrucibleFileAction
 import com.leyline.crucible.intellij.editor.CrucibleBraceMatcher
 import com.leyline.crucible.intellij.highlighting.CrucibleColorSettingsPage
@@ -16,7 +15,7 @@ import com.leyline.crucible.intellij.highlighting.CrucibleSyntaxHighlighter
 import com.leyline.crucible.intellij.lexer.CrucibleTokenTypes
 import com.leyline.crucible.intellij.psi.CrucibleFile
 
-class CrucibleEditorTest : BasePlatformTestCase() {
+class CrucibleEditorTest : CrucibleTestCase() {
     fun `test cru files are Crucible files`() {
         assertSame(CrucibleFileType, FileTypeManager.getInstance().getFileTypeByExtension("cru"))
         val file = myFixture.configureByText("model.cru", "structure A {}")
@@ -43,7 +42,7 @@ class CrucibleEditorTest : BasePlatformTestCase() {
         assertTrue(tags.isNotEmpty())
         assertTrue("unknown tags in ${tags - page.additionalHighlightingTagToDescriptorMap.keys}",
             page.additionalHighlightingTagToDescriptorMap.keys.containsAll(tags))
-        assertEquals(19, page.attributeDescriptors.size)
+        assertEquals(24, page.attributeDescriptors.size)
     }
 
     fun `test line comments toggle`() {
