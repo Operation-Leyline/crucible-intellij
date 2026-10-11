@@ -10,6 +10,7 @@ import com.leyline.crucible.intellij.lsp.CrucibleDocumentHighlights
 import com.leyline.crucible.intellij.lsp.CrucibleFormatting
 import com.leyline.crucible.intellij.lsp.CrucibleRename
 import com.leyline.crucible.intellij.lsp.CrucibleGotoDeclarationHandler
+import com.leyline.crucible.intellij.lsp.CrucibleLspClientDescriptor
 import org.eclipse.lsp4j.Position
 
 /** Typing assistance, templates and the LSP customizations. */
@@ -88,6 +89,11 @@ class CrucibleAssistTest : CrucibleTestCase() {
         myFixture.configureByText("a.cru", "structure A { b: <caret>B }\n")
         val element = myFixture.file.findElementAt(myFixture.caretOffset)
         assertNull(CrucibleGotoDeclarationHandler().getGotoDeclarationTargets(element, myFixture.caretOffset, myFixture.editor))
+    }
+
+    fun `test the client asks for usage lenses, whose command it runs`() {
+        val options = CrucibleLspClientDescriptor(project).createInitializationOptions()
+        assertEquals(mapOf("showReferences" to true), options)
     }
 
     fun `test LSP positions count UTF-16 units, not editor columns`() {

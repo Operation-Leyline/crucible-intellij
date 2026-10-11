@@ -98,6 +98,12 @@ class CrucibleLspIntegrationProvider : LspIntegrationProvider {
 class CrucibleLspClientDescriptor(project: Project) : ProjectWideLspClientDescriptor(project, "Crucible") {
     override fun isSupportedFile(file: VirtualFile): Boolean = isCrucibleFile(file)
 
+    /**
+     * The server offers usage-count lenses only to clients that run their
+     * `crucible.showReferences` command, which [CrucibleCodeLens] does.
+     */
+    override fun createInitializationOptions(): Any = mapOf("showReferences" to true)
+
     override fun createCommandLine(): GeneralCommandLine {
         val server = CrucibleServerLocator.find()
             ?: throw ExecutionException(CrucibleBundle.message("notification.server.missing.title"))
