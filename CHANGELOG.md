@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Bundles `crucible-lsp` from Crucible 0.5.0, the first release that ships it.
 - Semantic highlighting, highlighting of other uses and rename now actually
   go through `crucible-lsp` in `.cru` files. The platform asks a language
   server for these only in plain-text and TextMate files unless a plugin opts
