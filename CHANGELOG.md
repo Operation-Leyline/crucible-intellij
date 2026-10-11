@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-11
+
 - Bundles `crucible-lsp` from Crucible 0.5.0, the first release that ships it.
 - Semantic highlighting, highlighting of other uses and rename now actually
   go through `crucible-lsp` in `.cru` files. The platform asks a language
