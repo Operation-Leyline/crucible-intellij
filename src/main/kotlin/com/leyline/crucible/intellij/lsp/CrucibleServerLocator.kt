@@ -39,17 +39,14 @@ object CrucibleServerLocator {
         pluginPath: Path?,
     ): List<Pair<Path, ServerSource>> {
         if (useCustom) {
-            return if (customPath.isBlank()) emptyList() else listOf(Path.of(customPath) to ServerSource.CUSTOM)
+            return listOfNotNull(pathOf(customPath)?.let { it to ServerSource.CUSTOM })
         }
         val out = mutableListOf<Pair<Path, ServerSource>>()
-        environment["CRUCIBLE_LSP"]?.takeIf { it.isNotBlank() }?.let { out += Path.of(it) to ServerSource.ENVIRONMENT }
+        environment["CRUCIBLE_LSP"]?.let(::pathOf)?.let { out += it to ServerSource.ENVIRONMENT }
         pluginPath?.let { out += bundled(it) to ServerSource.BUNDLED }
-        val searchPath = environment["PATH"] ?: environment["Path"]
-        searchPath?.split(File.pathSeparator)?.filter { it.isNotBlank() }?.forEach {
-            out += Path.of(it, EXECUTABLE) to ServerSource.PATH
-        }
-        environment["CARGO_HOME"]?.takeIf { it.isNotBlank() }?.let { out += Path.of(it, "bin", EXECUTABLE) to ServerSource.CARGO }
-        out += Path.of(System.getProperty("user.home"), ".cargo", "bin", EXECUTABLE) to ServerSource.CARGO
+        searchPath(environment).forEach { dir -> pathOf(dir, EXECUTABLE)?.let { out += it to ServerSource.PATH } }
+        environment["CARGO_HOME"]?.let { pathOf(it, "bin", EXECUTABLE) }?.let { out += it to ServerSource.CARGO }
+        pathOf(System.getProperty("user.home"), ".cargo", "bin", EXECUTABLE)?.let { out += it to ServerSource.CARGO }
         return out
     }
 
@@ -76,3 +73,18 @@ object CrucibleServerLocator {
         return Files.isExecutable(path)
     }
 }
+
+/**
+ * A path from user or environment text, or null when it names none. Windows
+ * allows quoted `PATH` entries and "Copy as path" quotes too; `Path.of`
+ * rejects the quote character, and one bad entry must not stop the search.
+ */
+internal fun pathOf(first: String, vararg more: String): Path? {
+    val trimmed = first.trim().removeSurrounding("\"")
+    if (trimmed.isEmpty()) return null
+    return runCatching { Path.of(trimmed, *more) }.getOrNull()
+}
+
+/** The directories of `PATH`, as Windows or Unix spells the variable. */
+internal fun searchPath(environment: Map<String, String>): List<String> =
+    (environment["PATH"] ?: environment["Path"])?.split(File.pathSeparator)?.filter { it.isNotBlank() }.orEmpty()

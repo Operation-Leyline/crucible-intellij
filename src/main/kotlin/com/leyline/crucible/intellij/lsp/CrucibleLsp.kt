@@ -8,6 +8,7 @@ import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionPlaces
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.options.ShowSettingsUtil
@@ -42,6 +43,7 @@ import java.awt.event.MouseEvent
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import org.eclipse.lsp4j.Command
+import org.eclipse.lsp4j.Position
 
 /** `.cru` files and package manifests, which the server checks too. */
 internal fun isCrucibleFile(file: VirtualFile): Boolean =
@@ -168,8 +170,12 @@ class CrucibleCodeLens : LspCodeLensSupport() {
         }
         val (line, character) = positionOf(command.arguments?.getOrNull(1)) ?: return
         val project = lspClient.project
+        // The server counts UTF-16 units; a descriptor's column counts a tab
+        // as several, so go through the document's offset.
+        val document = FileDocumentManager.getInstance().getDocument(contextFile) ?: return
+        val offset = CrucibleGotoDeclarationHandler.offsetOf(document, Position(line, character))
         val editor = FileEditorManager.getInstance(project)
-            .openTextEditor(OpenFileDescriptor(project, contextFile, line, character), true) ?: return
+            .openTextEditor(OpenFileDescriptor(project, contextFile, offset), true) ?: return
         val action = ActionManager.getInstance().getAction(SHOW_USAGES_ACTION) ?: return
         ActionManager.getInstance().tryToExecute(action, mouseEvent, editor.contentComponent, ActionPlaces.EDITOR_INLAY, true)
     }

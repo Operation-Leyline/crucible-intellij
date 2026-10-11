@@ -3,12 +3,14 @@ package com.leyline.crucible.intellij
 import com.intellij.codeInsight.template.TemplateActionContext
 import com.intellij.codeInsight.template.impl.TemplateManagerImpl
 import com.intellij.codeInsight.template.impl.TemplateSettings
+import com.intellij.openapi.editor.EditorFactory
 import com.intellij.testFramework.LightVirtualFile
 import com.leyline.crucible.intellij.highlighting.CrucibleSemanticTokens
 import com.leyline.crucible.intellij.lsp.CrucibleDocumentHighlights
 import com.leyline.crucible.intellij.lsp.CrucibleFormatting
 import com.leyline.crucible.intellij.lsp.CrucibleRename
 import com.leyline.crucible.intellij.lsp.CrucibleGotoDeclarationHandler
+import org.eclipse.lsp4j.Position
 
 /** Typing assistance, templates and the LSP customizations. */
 class CrucibleAssistTest : CrucibleTestCase() {
@@ -86,5 +88,16 @@ class CrucibleAssistTest : CrucibleTestCase() {
         myFixture.configureByText("a.cru", "structure A { b: <caret>B }\n")
         val element = myFixture.file.findElementAt(myFixture.caretOffset)
         assertNull(CrucibleGotoDeclarationHandler().getGotoDeclarationTargets(element, myFixture.caretOffset, myFixture.editor))
+    }
+
+    fun `test LSP positions count UTF-16 units, not editor columns`() {
+        // A tab is one unit to the server and several columns to the editor;
+        // an emoji is two units. The document normalizes CRLF to LF.
+        val document = EditorFactory.getInstance().createDocument("a\tb😀c\nnext")
+        assertEquals(5, CrucibleGotoDeclarationHandler.offsetOf(document, Position(0, 5)))
+        assertEquals(Position(0, 5), CrucibleGotoDeclarationHandler.positionOf(document, 5))
+        // Past the end of a line clamps to it; past the last line, to the last.
+        assertEquals(6, CrucibleGotoDeclarationHandler.offsetOf(document, Position(0, 99)))
+        assertEquals(document.textLength, CrucibleGotoDeclarationHandler.offsetOf(document, Position(9, 99)))
     }
 }

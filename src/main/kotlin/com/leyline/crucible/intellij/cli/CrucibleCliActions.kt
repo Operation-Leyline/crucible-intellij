@@ -129,7 +129,7 @@ class GenerateCrucibleClientAction : CrucibleCliAction() {
  * prefilled from the package namespace. Only the chosen target's options show.
  */
 class GenerateClientDialog(project: Project, packageDir: Path) : DialogWrapper(project) {
-    private val namespace = CruciblePackages.namespace(packageDir) ?: packageDir.fileName.toString()
+    private val namespace = CruciblePackages.namespace(packageDir) ?: CruciblePackages.fallbackNamespace(packageDir)
     private val outBase = (project.basePath?.let { Path.of(it) } ?: packageDir).resolve("generated")
     private val targets = ComboBox(GenerateTarget.entries.toTypedArray())
     private val fields = GenerateOption.entries.associateWith { JBTextField() }
