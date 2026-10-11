@@ -85,8 +85,15 @@ class CrucibleConfigurable : BoundSearchableConfigurable(
     }
 
     override fun apply() {
+        val before = serverSettings()
         super.apply()
-        CrucibleLspIntegrationProvider.restartAll()
+        // The CLI path only matters to the next CLI action.
+        if (serverSettings() != before) CrucibleLspIntegrationProvider.restartAll()
+    }
+
+    /** What the running language server is started with. */
+    private fun serverSettings(): List<Any> = with(CrucibleSettings.getInstance()) {
+        listOf(useCustomServer, serverPath, serverArguments, serverEnvironment)
     }
 
     private fun describe(server: ResolvedServer?): String {

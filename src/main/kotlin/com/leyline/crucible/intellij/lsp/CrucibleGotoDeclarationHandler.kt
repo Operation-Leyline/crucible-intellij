@@ -4,6 +4,7 @@ import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.fileEditor.FileDocumentManager
+import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.platform.lsp.api.LspClient
@@ -43,10 +44,15 @@ class CrucibleGotoDeclarationHandler : GotoDeclarationHandler {
 
     private fun definitions(client: LspClient, file: VirtualFile, position: Position): List<Pair<String, Position>> {
         val params = DefinitionParams(client.getDocumentIdentifier(file), position)
-        // A stopped or busy server must never hold up the editor: no answer is no target.
-        val result = runCatching {
+        // A stopped or busy server must never hold up the editor: no answer is
+        // no target. Cancellation belongs to the platform, so it propagates.
+        val result = try {
             client.sendRequestSync(TIMEOUT_MS) { it.textDocumentService.definition(params) }
-        }.getOrNull() ?: return emptyList()
+        } catch (e: ProcessCanceledException) {
+            throw e
+        } catch (e: Exception) {
+            null
+        } ?: return emptyList()
         return if (result.isLeft) {
             result.left.orEmpty().map { it.uri to it.range.start }
         } else {

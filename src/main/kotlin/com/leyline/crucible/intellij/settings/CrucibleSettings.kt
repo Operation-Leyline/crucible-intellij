@@ -1,6 +1,7 @@
 package com.leyline.crucible.intellij.settings
 
 import com.intellij.openapi.components.BaseState
+import com.intellij.openapi.components.RoamingType
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.SimplePersistentStateComponent
 import com.intellij.openapi.components.State
@@ -9,7 +10,9 @@ import com.intellij.openapi.components.service
 
 /** Application-wide Crucible settings, stored in `crucible.xml`. */
 @Service(Service.Level.APP)
-@State(name = "CrucibleSettings", storages = [Storage("crucible.xml")])
+// Executable paths and environment variables (which may hold secrets) belong
+// to this machine: never sync them to another.
+@State(name = "CrucibleSettings", storages = [Storage("crucible.xml", roamingType = RoamingType.DISABLED)])
 class CrucibleSettings : SimplePersistentStateComponent<CrucibleSettings.State>(State()) {
     class State : BaseState() {
         /** Use [serverPath] instead of finding the server automatically. */

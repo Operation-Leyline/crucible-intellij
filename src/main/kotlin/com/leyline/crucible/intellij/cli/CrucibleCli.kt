@@ -2,8 +2,9 @@ package com.leyline.crucible.intellij.cli
 
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.openapi.util.SystemInfo
+import com.leyline.crucible.intellij.lsp.pathOf
+import com.leyline.crucible.intellij.lsp.searchPath
 import com.leyline.crucible.intellij.settings.CrucibleSettings
-import java.io.File
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
@@ -22,16 +23,11 @@ object CrucibleCli {
         candidates(customPath, environment, home).firstOrNull { Files.isRegularFile(it) && Files.isExecutable(it) }
 
     fun candidates(customPath: String, environment: Map<String, String>, home: Path): List<Path> {
-        if (customPath.isNotBlank()) return listOf(Path.of(customPath))
-        // `add`, not `+=`: a Path is itself an Iterable of paths.
-        val out = mutableListOf<Path>()
-        environment["CRUCIBLE_CLI"]?.takeIf { it.isNotBlank() }?.let { out.add(Path.of(it)) }
-        (environment["PATH"] ?: environment["Path"])?.split(File.pathSeparator)?.filter { it.isNotBlank() }?.forEach {
-            out.add(Path.of(it, EXECUTABLE))
-        }
-        environment["CARGO_HOME"]?.takeIf { it.isNotBlank() }?.let { out.add(Path.of(it, "bin", EXECUTABLE)) }
-        out.add(home.resolve(".cargo").resolve("bin").resolve(EXECUTABLE))
-        return out
+        if (customPath.isNotBlank()) return listOfNotNull(pathOf(customPath))
+        return listOfNotNull(environment["CRUCIBLE_CLI"]?.let(::pathOf)) +
+            searchPath(environment).mapNotNull { pathOf(it, EXECUTABLE) } +
+            listOfNotNull(environment["CARGO_HOME"]?.let { pathOf(it, "bin", EXECUTABLE) }) +
+            listOf(home.resolve(".cargo").resolve("bin").resolve(EXECUTABLE))
     }
 
     /** `crucible check <package>`: every problem the build would report. */
@@ -63,9 +59,13 @@ object CrucibleCli {
  * is not one.
  */
 object CruciblePackages {
-    private val MODEL = Regex("""^\s*(\[\s*model\s*[.\]]|model\s*\.)""", RegexOption.MULTILINE)
+    // At the top level only: `model.namespace = ..` or `model = { .. }`.
+    private val TOP_LEVEL_MODEL = Regex("""^\s*model\s*(\.|=\s*\{)""")
     private val TABLE = Regex("""^\s*\[\[?\s*([^\]]*?)\s*]""")
-    private val STRING_KEY = Regex("""^\s*([A-Za-z0-9_.\-\s]+?)\s*=\s*"([^"]*)"""")
+    // A key with a basic or a literal string value.
+    private val STRING_KEY = Regex("""^\s*([A-Za-z0-9_.\-\s]+?)\s*=\s*(?:"([^"]*)"|'([^']*)')""")
+    private val INLINE_MODEL = Regex("""^\s*model\s*=\s*\{(.*)}""")
+    private val INLINE_NAMESPACE = Regex("""(?:^|,)\s*namespace\s*=\s*(?:"([^"]*)"|'([^']*)')""")
 
     /** The package `path` (a file or directory) belongs to: the nearest such directory at or above it. */
     fun packageOf(path: Path): Path? {
@@ -77,12 +77,33 @@ object CruciblePackages {
         return null
     }
 
-    fun isPackage(dir: Path): Boolean = manifest(dir)?.let { MODEL.containsMatchIn(it) } == true
+    /**
+     * Whether `dir`'s manifest makes `model` a table: a `[model]` or
+     * `[model.*]` header, or a top-level `model.*` key or inline table. A
+     * `model` key inside another table (`[rules] model = ..`) is not it, nor
+     * is an array of tables (`[[model]]`).
+     */
+    fun isPackage(dir: Path): Boolean {
+        val text = manifest(dir) ?: return false
+        var table = ""
+        for (line in text.lines()) {
+            val header = TABLE.find(line)
+            if (header != null) {
+                table = header.groupValues[1].filterNot(Char::isWhitespace)
+                val array = line.trimStart().startsWith("[[")
+                if (!array && (table == "model" || table.startsWith("model."))) return true
+                continue
+            }
+            if (table.isEmpty() && TOP_LEVEL_MODEL.containsMatchIn(line)) return true
+        }
+        return false
+    }
 
     /**
      * The package namespace, used to suggest package and module names: the
-     * `namespace` key of the `[model]` table, or a top-level `model.namespace`.
-     * A `namespace` in another table is not it.
+     * `namespace` key of the `[model]` table, a top-level `model.namespace`,
+     * or the key of a top-level `model = { .. }`. A `namespace` in another
+     * table is not it.
      */
     fun namespace(dir: Path): String? {
         val text = manifest(dir) ?: return null
@@ -92,15 +113,28 @@ object CruciblePackages {
                 table = it.groupValues[1].filterNot(Char::isWhitespace)
                 continue
             }
-            val (key, value) = STRING_KEY.find(line)?.destructured ?: continue
-            val path = listOf(table, key.filterNot(Char::isWhitespace)).filter { it.isNotEmpty() }.joinToString(".")
-            if (path == "model.namespace") return value.takeIf { it.isNotBlank() }
+            if (table.isEmpty()) {
+                INLINE_MODEL.find(line)?.let { inline ->
+                    val found = INLINE_NAMESPACE.find(inline.groupValues[1]) ?: return null
+                    // A blank namespace names nothing: the fallback applies.
+                    return found.groupValues.drop(1).firstOrNull { it.isNotBlank() }
+                }
+            }
+            val match = STRING_KEY.find(line) ?: continue
+            val key = match.groupValues[1].filterNot(Char::isWhitespace)
+            val path = listOf(table, key).filter { it.isNotEmpty() }.joinToString(".")
+            if (path == "model.namespace") return match.groupValues.drop(2).firstOrNull { it.isNotBlank() }
         }
         return null
     }
 
+    /** A namespace-like default for a package that names none: `my-api` becomes `my_api`. */
+    fun fallbackNamespace(dir: Path): String =
+        dir.fileName.toString().lowercase().replace(Regex("[^a-z0-9_.]"), "_").trim('_', '.').ifEmpty { "model" }
+
     private fun manifest(dir: Path): String? = runCatching {
-        dir.resolve("crucible.toml").takeIf { Files.isRegularFile(it) }?.let { Files.readString(it) }
+        // A byte-order mark is not part of the TOML; the compiler skips it too.
+        dir.resolve("crucible.toml").takeIf { Files.isRegularFile(it) }?.let { Files.readString(it).removePrefix("﻿") }
     }.getOrNull()
 }
 

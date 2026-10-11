@@ -5,6 +5,7 @@ import com.leyline.crucible.intellij.cli.CrucibleCli
 import com.leyline.crucible.intellij.cli.CruciblePackages
 import com.leyline.crucible.intellij.cli.GenerateOption
 import com.leyline.crucible.intellij.cli.GenerateTarget
+import com.leyline.crucible.intellij.lsp.CrucibleServerLocator
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
@@ -105,5 +106,46 @@ class CrucibleCliTest {
         assertEquals("Example\\Shop", GenerateTarget.PHP.defaults("example.shop")[GenerateOption.NAMESPACE])
         assertEquals("example/shop", GenerateTarget.PHP.defaults("example.shop")[GenerateOption.PACKAGE_NAME])
         assertEquals("Example.Shop", GenerateTarget.CSHARP.defaults("example.shop")[GenerateOption.NAMESPACE])
+    }
+
+    @Test
+    fun `quoted and malformed search path entries are skipped, not fatal`() {
+        val home = Path.of("/home/me")
+        // A NUL is invalid in a path on every platform, as a quote is on Windows.
+        val path = listOf("\"/quoted dir\"", "bad\u0000dir", "/b").joinToString(File.pathSeparator)
+        val candidates = CrucibleCli.candidates("", mapOf("PATH" to path), home)
+        assertEquals(Path.of("/quoted dir", exe), candidates[0])
+        assertEquals(Path.of("/b", exe), candidates[1])
+        assertEquals(listOf(Path.of("/custom/crucible")), CrucibleCli.candidates("\"/custom/crucible\"", emptyMap(), home))
+        val servers = CrucibleServerLocator.candidates(false, "", mapOf("PATH" to path), null).map { it.first }
+        assertTrue(servers.any { it.startsWith(Path.of("/quoted dir")) })
+        assertEquals(
+            listOf(Path.of("/custom/lsp")),
+            CrucibleServerLocator.candidates(true, " \"/custom/lsp\" ", emptyMap(), null).map { it.first },
+        )
+    }
+
+    @Test
+    fun `inline model tables and literal strings name the namespace`() {
+        val root = Files.createTempDirectory("crucible-namespaces")
+        fun manifest(name: String, text: String): Path =
+            Files.createDirectories(root.resolve(name)).also { Files.writeString(it.resolve("crucible.toml"), text) }
+        val inline = manifest("inline", "model = { namespace = \"i.n\", sources = [\".\"] }\n")
+        assertTrue(CruciblePackages.isPackage(inline))
+        assertEquals("i.n", CruciblePackages.namespace(inline))
+        assertEquals("l.s", CruciblePackages.namespace(manifest("literal", "[model]\nnamespace = 'l.s'\n")))
+        assertNull(CruciblePackages.namespace(manifest("none", "model = { sources = [\".\"] }\n")))
+        // A blank namespace is none: the directory-name fallback applies.
+        assertNull(CruciblePackages.namespace(manifest("blank", "[model]\nnamespace = \"   \"\n")))
+        assertNull(CruciblePackages.namespace(manifest("blank-inline", "model = { namespace = ' ' }\n")))
+        // `model` inside another table, or an array of tables, is no package.
+        assertFalse(CruciblePackages.isPackage(manifest("nested", "[rules]\nmodel = { namespace = \"x\" }\n")))
+        assertFalse(CruciblePackages.isPackage(manifest("array", "[[model]]\nnamespace = \"x\"\n")))
+        // CRLF, a trailing comment and a byte-order mark read as the compiler reads them.
+        val windows = manifest("windows", "﻿[model] # the package\r\nnamespace = \"w.n\" # here\r\n")
+        assertTrue(CruciblePackages.isPackage(windows))
+        assertEquals("w.n", CruciblePackages.namespace(windows))
+        assertEquals("my_api", CruciblePackages.fallbackNamespace(Path.of("/x/My-API")))
+        assertEquals("model", CruciblePackages.fallbackNamespace(Path.of("/x/---")))
     }
 }

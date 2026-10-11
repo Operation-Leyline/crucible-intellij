@@ -8,6 +8,8 @@ import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionPlaces
+import com.intellij.openapi.editor.Document
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.options.ShowSettingsUtil
@@ -42,6 +44,7 @@ import java.awt.event.MouseEvent
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import org.eclipse.lsp4j.Command
+import org.eclipse.lsp4j.Position
 
 /** `.cru` files and package manifests, which the server checks too. */
 internal fun isCrucibleFile(file: VirtualFile): Boolean =
@@ -95,6 +98,12 @@ class CrucibleLspIntegrationProvider : LspIntegrationProvider {
 
 class CrucibleLspClientDescriptor(project: Project) : ProjectWideLspClientDescriptor(project, "Crucible") {
     override fun isSupportedFile(file: VirtualFile): Boolean = isCrucibleFile(file)
+
+    /**
+     * The server offers usage-count lenses only to clients that run their
+     * `crucible.showReferences` command, which [CrucibleCodeLens] does.
+     */
+    override fun createInitializationOptions(): Any = mapOf("showReferences" to true)
 
     override fun createCommandLine(): GeneralCommandLine {
         val server = CrucibleServerLocator.find()
@@ -166,10 +175,11 @@ class CrucibleCodeLens : LspCodeLensSupport() {
             super.codeLensClicked(lspClient, contextFile, command, mouseEvent)
             return
         }
-        val (line, character) = positionOf(command.arguments?.getOrNull(1)) ?: return
         val project = lspClient.project
+        val document = FileDocumentManager.getInstance().getDocument(contextFile) ?: return
+        val offset = offsetFor(document, command.arguments?.getOrNull(1)) ?: return
         val editor = FileEditorManager.getInstance(project)
-            .openTextEditor(OpenFileDescriptor(project, contextFile, line, character), true) ?: return
+            .openTextEditor(OpenFileDescriptor(project, contextFile, offset), true) ?: return
         val action = ActionManager.getInstance().getAction(SHOW_USAGES_ACTION) ?: return
         ActionManager.getInstance().tryToExecute(action, mouseEvent, editor.contentComponent, ActionPlaces.EDITOR_INLAY, true)
     }
@@ -179,6 +189,16 @@ class CrucibleCodeLens : LspCodeLensSupport() {
 
         /** The platform's Show Usages popup (Ctrl+Alt+F7). */
         private const val SHOW_USAGES_ACTION = "ShowUsages"
+
+        /**
+         * Where a lens's position argument is in `document`. The server counts
+         * UTF-16 units; an editor column counts a tab as several, so the
+         * position goes through the document's offset, never a column.
+         */
+        fun offsetFor(document: Document, argument: Any?): Int? {
+            val (line, character) = positionOf(argument) ?: return null
+            return CrucibleGotoDeclarationHandler.offsetOf(document, Position(line, character))
+        }
 
         /** An LSP `Position` argument, as lsp4j hands it over: a JSON object. */
         fun positionOf(argument: Any?): Pair<Int, Int>? {
