@@ -92,7 +92,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: Operation-Leyline/crucible
-          # Until a Crucible release ships crucible-lsp, smoke against main.
+          # Main rather than the bundled release, so a server change that
+          # breaks the plugin shows up before Crucible releases it.
           ref: ${{ vars.CRUCIBLE_REF || 'main' }}
           token: ${{ steps.app-token.outputs.token }}
           path: crucible

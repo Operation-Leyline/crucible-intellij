@@ -30,8 +30,9 @@ Download `crucible-intellij-<version>.zip` from the
 [releases](https://github.com/Operation-Leyline/crucible-intellij/releases),
 then use Settings | Plugins | ⚙ | Install Plugin from Disk and restart the IDE.
 
-The release ZIP bundles `crucible-lsp` for Linux, macOS (Intel and Apple
-Silicon) and Windows. To use another build, for example one from a Crucible
+The release ZIP bundles `crucible-lsp` for Linux x64, macOS (Intel and Apple
+Silicon) and Windows x64; on Linux ARM64 the plugin uses a `crucible-lsp` on
+`PATH` or in Cargo's bin directory. To use another build, for example one from a Crucible
 checkout, choose it under Settings | Languages & Frameworks | Crucible, or set
 `CRUCIBLE_LSP`. The same page takes extra server arguments and environment
 variables. The language server widget in the status bar shows the server's
