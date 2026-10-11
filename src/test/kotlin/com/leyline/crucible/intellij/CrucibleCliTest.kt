@@ -135,6 +135,9 @@ class CrucibleCliTest {
         assertEquals("i.n", CruciblePackages.namespace(inline))
         assertEquals("l.s", CruciblePackages.namespace(manifest("literal", "[model]\nnamespace = 'l.s'\n")))
         assertNull(CruciblePackages.namespace(manifest("none", "model = { sources = [\".\"] }\n")))
+        // A blank namespace is none: the directory-name fallback applies.
+        assertNull(CruciblePackages.namespace(manifest("blank", "[model]\nnamespace = \"   \"\n")))
+        assertNull(CruciblePackages.namespace(manifest("blank-inline", "model = { namespace = ' ' }\n")))
         // `model` inside another table, or an array of tables, is no package.
         assertFalse(CruciblePackages.isPackage(manifest("nested", "[rules]\nmodel = { namespace = \"x\" }\n")))
         assertFalse(CruciblePackages.isPackage(manifest("array", "[[model]]\nnamespace = \"x\"\n")))

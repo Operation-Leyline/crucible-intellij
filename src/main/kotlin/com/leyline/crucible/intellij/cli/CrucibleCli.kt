@@ -116,13 +116,14 @@ object CruciblePackages {
             if (table.isEmpty()) {
                 INLINE_MODEL.find(line)?.let { inline ->
                     val found = INLINE_NAMESPACE.find(inline.groupValues[1]) ?: return null
-                    return found.groupValues.drop(1).firstOrNull { it.isNotEmpty() }
+                    // A blank namespace names nothing: the fallback applies.
+                    return found.groupValues.drop(1).firstOrNull { it.isNotBlank() }
                 }
             }
             val match = STRING_KEY.find(line) ?: continue
             val key = match.groupValues[1].filterNot(Char::isWhitespace)
             val path = listOf(table, key).filter { it.isNotEmpty() }.joinToString(".")
-            if (path == "model.namespace") return match.groupValues.drop(2).firstOrNull { it.isNotEmpty() }
+            if (path == "model.namespace") return match.groupValues.drop(2).firstOrNull { it.isNotBlank() }
         }
         return null
     }
