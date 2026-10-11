@@ -59,8 +59,8 @@ object CrucibleCli {
  * is not one.
  */
 object CruciblePackages {
-    // `[model]`, `[model.naming]`, `model.namespace = ..` or `model = { .. }`.
-    private val MODEL = Regex("""^\s*(\[\s*model\s*[.\]]|model\s*\.|model\s*=\s*\{)""", RegexOption.MULTILINE)
+    // At the top level only: `model.namespace = ..` or `model = { .. }`.
+    private val TOP_LEVEL_MODEL = Regex("""^\s*model\s*(\.|=\s*\{)""")
     private val TABLE = Regex("""^\s*\[\[?\s*([^\]]*?)\s*]""")
     // A key with a basic or a literal string value.
     private val STRING_KEY = Regex("""^\s*([A-Za-z0-9_.\-\s]+?)\s*=\s*(?:"([^"]*)"|'([^']*)')""")
@@ -77,7 +77,27 @@ object CruciblePackages {
         return null
     }
 
-    fun isPackage(dir: Path): Boolean = manifest(dir)?.let { MODEL.containsMatchIn(it) } == true
+    /**
+     * Whether `dir`'s manifest makes `model` a table: a `[model]` or
+     * `[model.*]` header, or a top-level `model.*` key or inline table. A
+     * `model` key inside another table (`[rules] model = ..`) is not it, nor
+     * is an array of tables (`[[model]]`).
+     */
+    fun isPackage(dir: Path): Boolean {
+        val text = manifest(dir) ?: return false
+        var table = ""
+        for (line in text.lines()) {
+            val header = TABLE.find(line)
+            if (header != null) {
+                table = header.groupValues[1].filterNot(Char::isWhitespace)
+                val array = line.trimStart().startsWith("[[")
+                if (!array && (table == "model" || table.startsWith("model."))) return true
+                continue
+            }
+            if (table.isEmpty() && TOP_LEVEL_MODEL.containsMatchIn(line)) return true
+        }
+        return false
+    }
 
     /**
      * The package namespace, used to suggest package and module names: the
@@ -112,7 +132,8 @@ object CruciblePackages {
         dir.fileName.toString().lowercase().replace(Regex("[^a-z0-9_.]"), "_").trim('_', '.').ifEmpty { "model" }
 
     private fun manifest(dir: Path): String? = runCatching {
-        dir.resolve("crucible.toml").takeIf { Files.isRegularFile(it) }?.let { Files.readString(it) }
+        // A byte-order mark is not part of the TOML; the compiler skips it too.
+        dir.resolve("crucible.toml").takeIf { Files.isRegularFile(it) }?.let { Files.readString(it).removePrefix("﻿") }
     }.getOrNull()
 }
 

@@ -135,6 +135,13 @@ class CrucibleCliTest {
         assertEquals("i.n", CruciblePackages.namespace(inline))
         assertEquals("l.s", CruciblePackages.namespace(manifest("literal", "[model]\nnamespace = 'l.s'\n")))
         assertNull(CruciblePackages.namespace(manifest("none", "model = { sources = [\".\"] }\n")))
+        // `model` inside another table, or an array of tables, is no package.
+        assertFalse(CruciblePackages.isPackage(manifest("nested", "[rules]\nmodel = { namespace = \"x\" }\n")))
+        assertFalse(CruciblePackages.isPackage(manifest("array", "[[model]]\nnamespace = \"x\"\n")))
+        // CRLF, a trailing comment and a byte-order mark read as the compiler reads them.
+        val windows = manifest("windows", "﻿[model] # the package\r\nnamespace = \"w.n\" # here\r\n")
+        assertTrue(CruciblePackages.isPackage(windows))
+        assertEquals("w.n", CruciblePackages.namespace(windows))
         assertEquals("my_api", CruciblePackages.fallbackNamespace(Path.of("/x/My-API")))
         assertEquals("model", CruciblePackages.fallbackNamespace(Path.of("/x/---")))
     }
