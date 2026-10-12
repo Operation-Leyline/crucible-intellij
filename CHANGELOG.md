@@ -2,11 +2,20 @@
 
 ## [Unreleased]
 
-- Code fences in hover documentation tagged `crucible` or `cru` are
-  highlighted with the plugin's Crucible lexer colors: the platform resolves
-  those tags to the plugin's language. The bundled `crucible-lsp` 0.5.0 does
-  not tag its fences yet, so its hovers stay plain until a Crucible release
-  that does (Crucible PR #227) is bundled.
+## [0.2.0] - 2026-10-12
+
+- Bundles `crucible-lsp` from Crucible 0.6.0.
+- Hover explains the language: every keyword, built-in type, constraint and
+  annotation (`structure`, `http`, `creates`, `@token`, ...) shows what it
+  means with a short example.
+- Hover on a type, member or resource entry shows its whole shape with its
+  constraints spelled out: a list shows its item type, a member its type,
+  presence, default and the constraints that apply to it.
+- Crucible code in a hover is highlighted in the plugin's colors: the server
+  tags its fences `crucible`, and the platform resolves the tag to the
+  plugin's language.
+- The 0.6.0 resource syntax (`readonly`, `immutable`, `writeonly`, `as` on
+  identifiers, `$*`) is highlighted, completed and explained on hover.
 
 ## [0.1.0] - 2026-10-11
 
