@@ -128,7 +128,7 @@ class CrucibleLexer : LexerBase() {
         val KEYWORDS: Set<String> = setOf(
             "service", "protocol", "resource", "operation", "structure", "union", "error", "enum",
             "list", "map", "metadata", "rule", "except", "migration", "conversion", "template",
-            "readonly", "idempotent", "public", "internal", "strict", "sensitive",
+            "readonly", "immutable", "writeonly", "idempotent", "public", "internal", "strict", "sensitive",
             "GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS",
         )
 
