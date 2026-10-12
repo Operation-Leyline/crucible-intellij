@@ -12,7 +12,7 @@ manifests (`crucible.toml`).
 - Completion that knows where you are: declarations, clauses, types, errors, annotations and constraints
 - Semantic highlighting that tells services, protocols, resources, operations, errors and rules apart, with colors under Settings | Editor | Color Scheme | Crucible
 - Go to declaration (Ctrl+hover underlines what it can reach), go to type declaration, find usages, usage counts above declarations, rename and highlighting of other uses
-- Hover documentation, parameter info, inlay hints, the structure view, breadcrumbs and folding
+- Hover documentation with its Crucible code in the editor's colors, parameter info, inlay hints, the structure view, breadcrumbs and folding
 - Reformat Code with the compiler's own formatter, for a file or a selection
 - Smart indentation, `///` doc comment continuation, brace and quote pairing, line comments and TODOs
 - Live templates for declarations, and Surround With for input, output and structure bodies

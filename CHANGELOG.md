@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+- Hover documentation shows Crucible code in the editor's colors: the
+  declaration at the top of a hover and any code fence tagged `crucible` or
+  `cru` are highlighted like a `.cru` file. The platform resolves those tags
+  to the plugin's language, so this needs a `crucible-lsp` that tags its
+  fences; untagged fences stay plain.
+
 ## [0.1.0] - 2026-10-11
 
 - Bundles `crucible-lsp` from Crucible 0.5.0, the first release that ships it.

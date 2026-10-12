@@ -4,8 +4,15 @@ import com.google.gson.JsonObject
 import com.intellij.codeInsight.template.TemplateActionContext
 import com.intellij.codeInsight.template.impl.TemplateManagerImpl
 import com.intellij.codeInsight.template.impl.TemplateSettings
+import com.intellij.lang.documentation.QuickDocHighlightingHelper
+import com.intellij.markdown.utils.doc.DocMarkdownToHtmlConverter
 import com.intellij.openapi.editor.EditorFactory
+import com.intellij.openapi.editor.colors.EditorColorsManager
+import com.intellij.openapi.editor.colors.TextAttributesKey
+import com.intellij.ui.ColorUtil
 import com.intellij.testFramework.LightVirtualFile
+import com.leyline.crucible.intellij.highlighting.CrucibleColorSettingsPage
+import com.leyline.crucible.intellij.highlighting.CrucibleColors
 import com.leyline.crucible.intellij.highlighting.CrucibleSemanticTokens
 import com.leyline.crucible.intellij.lsp.CrucibleCodeLens
 import com.leyline.crucible.intellij.lsp.CrucibleDocumentHighlights
@@ -119,5 +126,45 @@ class CrucibleAssistTest : CrucibleTestCase() {
         // Past the end of a line clamps to it; past the last line, to the last.
         assertEquals(6, CrucibleGotoDeclarationHandler.offsetOf(document, Position(0, 99)))
         assertEquals(document.textLength, CrucibleGotoDeclarationHandler.offsetOf(document, Position(9, 99)))
+    }
+
+    fun `test hover code fences named crucible or cru resolve to the plugin's language`() {
+        // The platform's LSP hover looks a fence's tag up by language id or
+        // display name (ignoring case), MIME type, then file extension.
+        for (tag in listOf("crucible", "Crucible", "cru")) {
+            assertSame(tag, CrucibleLanguage, QuickDocHighlightingHelper.guessLanguage(tag))
+        }
+    }
+
+    fun `test a hover's signature and its code fences get the plugin's colors`() {
+        // What the platform's LSP hover does with markdown that opens with a
+        // fence: the fence becomes the signature, the rest the description.
+        val signature = QuickDocHighlightingHelper.getStyledSignatureFragment(
+            project,
+            QuickDocHighlightingHelper.guessLanguage("crucible"),
+            "structure Item",
+        )
+        assertColored(signature, "structure", CrucibleColors.KEYWORD)
+        val description = DocMarkdownToHtmlConverter.convert(
+            project,
+            "An item.\n\n```crucible\nlist Items { member: string }\n```\n",
+            null,
+        )
+        assertColored(description, "list", CrucibleColors.KEYWORD)
+        assertColored(description, "string", CrucibleColors.BUILTIN_TYPE)
+    }
+
+    fun `test members have a color of their own on the settings page`() {
+        val page = CrucibleColorSettingsPage()
+        assertTrue(page.attributeDescriptors.any { it.key == CrucibleColors.MEMBER })
+        assertEquals(CrucibleColors.MEMBER, page.additionalHighlightingTagToDescriptorMap["member"])
+    }
+
+    private fun assertColored(html: String, word: String, key: TextAttributesKey) {
+        val color = EditorColorsManager.getInstance().globalScheme.getAttributes(key).foregroundColor
+        assertNotNull(key.externalName, color)
+        // A span carries the whitespace after its word, escaped.
+        val styled = Regex("""<span style="[^"]*color:\s*#${ColorUtil.toHex(color)}[^"]*">$word(&#32;|\s)*</span>""", RegexOption.IGNORE_CASE)
+        assertTrue("$word is not colored as ${key.externalName} in $html", styled.containsMatchIn(html))
     }
 }

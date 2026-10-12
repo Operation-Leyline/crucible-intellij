@@ -130,7 +130,11 @@ class CrucibleSmoke : ApplicationStarter {
 
         // The editor paints them: the platform asks for semantic tokens only
         // when the plugin opts in, so check the colors the passes produce.
-        val wanted = mapOf("Shop" to CrucibleColors.SERVICE, "ValidationException" to CrucibleColors.ERROR)
+        val wanted = mapOf(
+            "Shop" to CrucibleColors.SERVICE,
+            "ValidationException" to CrucibleColors.ERROR,
+            "other" to CrucibleColors.MEMBER,
+        )
         var painted = emptyMap<String, String>()
         val colorDeadline = System.nanoTime() + 60_000_000_000L
         while (System.nanoTime() < colorDeadline) {
@@ -139,7 +143,7 @@ class CrucibleSmoke : ApplicationStarter {
             Thread.sleep(500)
         }
         check(wanted.all { (word, key) -> painted[word] == key.externalName }) { "semantic colors in the editor: $painted" }
-        report("the editor paints declaration kinds $painted")
+        report("the editor paints declaration kinds and members $painted")
 
         // Ctrl+hover and Ctrl+click: the declaration handler asks the server.
         val referenceOffset = text.indexOf("other: ItemId") + "other: ".length
