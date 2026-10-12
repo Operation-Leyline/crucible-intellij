@@ -130,7 +130,11 @@ class CrucibleSmoke : ApplicationStarter {
 
         // The editor paints them: the platform asks for semantic tokens only
         // when the plugin opts in, so check the colors the passes produce.
-        val wanted = mapOf("Shop" to CrucibleColors.SERVICE, "ValidationException" to CrucibleColors.ERROR)
+        val wanted = mapOf(
+            "Shop" to CrucibleColors.SERVICE,
+            "ValidationException" to CrucibleColors.ERROR,
+            "other" to CrucibleColors.MEMBER,
+        )
         var painted = emptyMap<String, String>()
         val colorDeadline = System.nanoTime() + 60_000_000_000L
         while (System.nanoTime() < colorDeadline) {
@@ -139,7 +143,7 @@ class CrucibleSmoke : ApplicationStarter {
             Thread.sleep(500)
         }
         check(wanted.all { (word, key) -> painted[word] == key.externalName }) { "semantic colors in the editor: $painted" }
-        report("the editor paints declaration kinds $painted")
+        report("the editor paints declaration kinds and members $painted")
 
         // Ctrl+hover and Ctrl+click: the declaration handler asks the server.
         val referenceOffset = text.indexOf("other: ItemId") + "other: ".length
@@ -228,8 +232,12 @@ class CrucibleSmoke : ApplicationStarter {
         return result
     }
 
-    /** The color the daemon's passes give the first occurrence of each word. */
+    /** The color the daemon's passes give each word, which the fixture must name exactly once. */
     private fun colors(project: Project, file: VirtualFile, text: String, words: Set<String>): Map<String, String> {
+        for (word in words) {
+            val count = Regex("""\b${Regex.escape(word)}\b""").findAll(text).count()
+            check(count == 1) { "the smoke fixture names `$word` $count times; checked words must be unique" }
+        }
         var result = emptyMap<String, String>()
         ApplicationManager.getApplication().invokeAndWait {
             val infos = MainPassesRunner(project, "Crucible smoke", null)

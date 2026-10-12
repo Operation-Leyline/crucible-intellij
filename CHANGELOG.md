@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+- Code fences in hover documentation tagged `crucible` or `cru` are
+  highlighted with the plugin's Crucible lexer colors: the platform resolves
+  those tags to the plugin's language. The bundled `crucible-lsp` 0.5.0 does
+  not tag its fences yet, so its hovers stay plain until a Crucible release
+  that does (Crucible PR #227) is bundled.
+
 ## [0.1.0] - 2026-10-11
 
 - Bundles `crucible-lsp` from Crucible 0.5.0, the first release that ships it.

@@ -1,6 +1,7 @@
 package com.leyline.crucible.intellij
 
 import com.google.gson.JsonObject
+import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.openapi.util.SystemInfo
 import com.leyline.crucible.intellij.highlighting.CrucibleColors
 import com.leyline.crucible.intellij.highlighting.CrucibleSemanticTokens
@@ -12,6 +13,7 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -66,6 +68,27 @@ class CrucibleServerTest {
         assertEquals(CrucibleColors.OPERATION_DECLARATION, CrucibleSemanticTokens.colorOf("function", listOf("declaration")))
         assertEquals(CrucibleColors.DOC_COMMENT, CrucibleSemanticTokens.colorOf("comment", listOf("documentation")))
         assertNull(CrucibleSemanticTokens.colorOf("macro", emptyList()))
+    }
+
+    @Test
+    fun `every token type crucible-lsp emits has a color`() {
+        // TOKEN_TYPES in crucible-lsp/src/analysis.rs, in legend order.
+        val emitted = listOf(
+            "keyword", "type", "struct", "enum", "class", "interface", "function",
+            "property", "enumMember", "decorator", "parameter", "string", "number", "comment",
+        )
+        for (type in emitted) {
+            assertNotNull(type, CrucibleSemanticTokens.colorOf(type, emptyList()))
+        }
+    }
+
+    @Test
+    fun `members are colored as fields where declared and where named`() {
+        // The server sends a member as `property`: with `declaration` in a
+        // structure, input or output body, without it in `paginated(items: items)`.
+        assertEquals(CrucibleColors.MEMBER, CrucibleSemanticTokens.colorOf("property", listOf("declaration")))
+        assertEquals(CrucibleColors.MEMBER, CrucibleSemanticTokens.colorOf("property", emptyList()))
+        assertEquals(DefaultLanguageHighlighterColors.INSTANCE_FIELD, CrucibleColors.MEMBER.fallbackAttributeKey)
     }
 
     @Test
