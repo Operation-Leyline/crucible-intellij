@@ -7,13 +7,13 @@ import com.intellij.codeInsight.template.impl.TemplateSettings
 import com.intellij.lang.documentation.QuickDocHighlightingHelper
 import com.intellij.markdown.utils.doc.DocMarkdownToHtmlConverter
 import com.intellij.openapi.editor.EditorFactory
-import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.editor.colors.TextAttributesKey
-import com.intellij.ui.ColorUtil
+import com.intellij.openapi.fileTypes.SyntaxHighlighterFactory
 import com.intellij.testFramework.LightVirtualFile
 import com.leyline.crucible.intellij.highlighting.CrucibleColorSettingsPage
 import com.leyline.crucible.intellij.highlighting.CrucibleColors
 import com.leyline.crucible.intellij.highlighting.CrucibleSemanticTokens
+import com.leyline.crucible.intellij.highlighting.CrucibleSyntaxHighlighter
 import com.leyline.crucible.intellij.lsp.CrucibleCodeLens
 import com.leyline.crucible.intellij.lsp.CrucibleDocumentHighlights
 import com.leyline.crucible.intellij.lsp.CrucibleFormatting
@@ -136,35 +136,41 @@ class CrucibleAssistTest : CrucibleTestCase() {
         }
     }
 
-    fun `test a hover's signature and its code fences get the plugin's colors`() {
-        // What the platform's LSP hover does with markdown that opens with a
-        // fence: the fence becomes the signature, the rest the description.
-        val signature = QuickDocHighlightingHelper.getStyledSignatureFragment(
-            project,
-            QuickDocHighlightingHelper.guessLanguage("crucible"),
-            "structure Item",
-        )
-        assertColored(signature, "structure", CrucibleColors.KEYWORD)
-        val description = DocMarkdownToHtmlConverter.convert(
-            project,
-            "An item.\n\n```crucible\nlist Items { member: string }\n```\n",
-            null,
-        )
-        assertColored(description, "list", CrucibleColors.KEYWORD)
-        assertColored(description, "string", CrucibleColors.BUILTIN_TYPE)
+    fun `test a hover fence is highlighted by the Crucible lexer`() {
+        // The platform highlights a hover's fences with the language's syntax
+        // highlighter, the lexer only: semantic tokens never reach a popup.
+        val language = QuickDocHighlightingHelper.guessLanguage("crucible")!!
+        val highlighter = SyntaxHighlighterFactory.getSyntaxHighlighter(language, project, null)
+        assertInstanceOf(highlighter, CrucibleSyntaxHighlighter::class.java)
+        val lexer = highlighter.highlightingLexer
+        val code = "list Items { member: string }"
+        lexer.start(code)
+        val colors = mutableMapOf<String, List<TextAttributesKey>>()
+        while (lexer.tokenType != null) {
+            colors[code.substring(lexer.tokenStart, lexer.tokenEnd)] = highlighter.getTokenHighlights(lexer.tokenType).toList()
+            lexer.advance()
+        }
+        assertEquals(listOf(CrucibleColors.KEYWORD), colors["list"])
+        assertEquals(listOf(CrucibleColors.BUILTIN_TYPE), colors["string"])
+        assertEquals(emptyList<TextAttributesKey>(), colors["member"])
+    }
+
+    fun `test a hover fence renders keywords in a color of their own`() {
+        // Through the platform's Markdown converter, as the LSP hover renders
+        // a description. Only the shape of the HTML is assumed: a styled span
+        // per highlighted run, the keyword's style differing from a name's.
+        val markdown = "An item.\n\n```crucible\nlist Items { member: string }\n```\n"
+        val html = DocMarkdownToHtmlConverter.convert(project, markdown, null)
+        val styles = Regex("""<span style="([^"]*)">([^<]*)</span>""").findAll(html)
+            .associate { it.groupValues[2].replace("&#32;", " ").trim() to it.groupValues[1] }
+        val keyword = styles["list"]
+        assertTrue("no styled keyword in $html", keyword != null && "color" in keyword)
+        assertFalse("the keyword is styled like a name in $html", keyword == styles["member"])
     }
 
     fun `test members have a color of their own on the settings page`() {
         val page = CrucibleColorSettingsPage()
         assertTrue(page.attributeDescriptors.any { it.key == CrucibleColors.MEMBER })
         assertEquals(CrucibleColors.MEMBER, page.additionalHighlightingTagToDescriptorMap["member"])
-    }
-
-    private fun assertColored(html: String, word: String, key: TextAttributesKey) {
-        val color = EditorColorsManager.getInstance().globalScheme.getAttributes(key).foregroundColor
-        assertNotNull(key.externalName, color)
-        // A span carries the whitespace after its word, escaped.
-        val styled = Regex("""<span style="[^"]*color:\s*#${ColorUtil.toHex(color)}[^"]*">$word(&#32;|\s)*</span>""", RegexOption.IGNORE_CASE)
-        assertTrue("$word is not colored as ${key.externalName} in $html", styled.containsMatchIn(html))
     }
 }

@@ -232,8 +232,12 @@ class CrucibleSmoke : ApplicationStarter {
         return result
     }
 
-    /** The color the daemon's passes give the first occurrence of each word. */
+    /** The color the daemon's passes give each word, which the fixture must name exactly once. */
     private fun colors(project: Project, file: VirtualFile, text: String, words: Set<String>): Map<String, String> {
+        for (word in words) {
+            val count = Regex("""\b${Regex.escape(word)}\b""").findAll(text).count()
+            check(count == 1) { "the smoke fixture names `$word` $count times; checked words must be unique" }
+        }
         var result = emptyMap<String, String>()
         ApplicationManager.getApplication().invokeAndWait {
             val infos = MainPassesRunner(project, "Crucible smoke", null)
