@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-12
+
+- Bundles `crucible-lsp` from Crucible 0.6.1.
+- `$` completes bindings: in an operation's `input` or `output` and in a
+  `structure .. for` view, typing `$` offers the identifiers and properties
+  that list may bind, filtered by the operation's role, with each entry's
+  type, keywords and docs.
+
 ## [0.2.0] - 2026-10-12
 
 - Bundles `crucible-lsp` from Crucible 0.6.0.
