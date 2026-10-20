@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-19
+
+- Bundles `crucible-lsp` from Crucible 0.8.0.
+- Resolves and navigates `[Name]` doc links: Go to Declaration, Find Usages
+  and rename navigate between declarations and `[Name]` doc links.
+- `crucible.toml` completes and documents `enum_wire_values` and
+  `enum_wire_values_pattern` in `[rules.naming]`.
+- Highlights `sparse` as a keyword in `.cru` files (`sparse list`, `sparse map`).
+- Bundles language server support for Crucible 0.8.0 language features:
+  views for multiple resources (`structure .. for A, B`), typed permissions,
+  and policy rule member conditions (`has member <name>`).
+
 ## [0.2.1] - 2026-10-12
 
 - Bundles `crucible-lsp` from Crucible 0.6.1.
