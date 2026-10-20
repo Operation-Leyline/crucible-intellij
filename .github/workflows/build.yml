@@ -80,22 +80,12 @@ jobs:
         with: { persist-credentials: false }
       - name: Free disk space for the IDE downloads
         run: ./.github/free-disk-space.sh
-      - name: Authenticate the private Crucible checkout
-        id: app-token
-        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
-        with:
-          app-id: ${{ vars.CRUCIBLE_APP_ID }}
-          private-key: ${{ secrets.CRUCIBLE_APP_PRIVATE_KEY }}
-          owner: Operation-Leyline
-          repositories: crucible
-          permission-contents: read
       - uses: actions/checkout@v4
         with:
           repository: Operation-Leyline/crucible
           # Main rather than the bundled release, so a server change that
           # breaks the plugin shows up before Crucible releases it.
           ref: ${{ vars.CRUCIBLE_REF || 'main' }}
-          token: ${{ steps.app-token.outputs.token }}
           path: crucible
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@stable
