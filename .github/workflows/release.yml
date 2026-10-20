@@ -27,18 +27,9 @@ jobs:
           echo "CRUCIBLE_VERSION=$(sed -n 's/^crucibleVersion *= *//p' gradle.properties)" >> "$GITHUB_ENV"
       - name: Free disk space for the IDE downloads
         run: ./.github/free-disk-space.sh
-      - name: Authenticate the private Crucible release
-        id: app-token
-        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
-        with:
-          app-id: ${{ vars.CRUCIBLE_APP_ID }}
-          private-key: ${{ secrets.CRUCIBLE_APP_PRIVATE_KEY }}
-          owner: Operation-Leyline
-          repositories: crucible
-          permission-contents: read
       - name: Download crucible-lsp for every platform
         env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           gh release download "v$CRUCIBLE_VERSION" --repo Operation-Leyline/crucible \
             --pattern 'crucible-lsp-*.zip' --dir server-dist
