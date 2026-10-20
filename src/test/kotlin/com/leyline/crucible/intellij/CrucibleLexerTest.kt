@@ -44,6 +44,7 @@ class CrucibleLexerTest {
                 input { status?: integer { range 1..100, format date-time } }
             }
             resource City { immutable writeonly property seed: string }
+            sparse list CityList: City
             """.trimIndent(),
         )
         val kinds = tokens.associate { it.second to it.first }
@@ -54,6 +55,7 @@ class CrucibleLexerTest {
         assertEquals(T.KEYWORD, kinds["readonly"])
         assertEquals(T.KEYWORD, kinds["immutable"])
         assertEquals(T.KEYWORD, kinds["writeonly"])
+        assertEquals(T.KEYWORD, kinds["sparse"])
         assertEquals(T.KEYWORD, kinds["operation"])
         assertEquals(T.KEYWORD, kinds["GET"])
         // Contextual words and names wait for semantic tokens.
